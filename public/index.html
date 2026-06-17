@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finanzas Claude</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- AUTH SCREEN                                                    -->
+<!-- ============================================================ -->
+<div id="auth-screen">
+  <div class="auth-bg"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="auth-logo-icon">💰</span>
+      <h1 class="auth-title">Finanzas Claude</h1>
+      <p class="auth-subtitle">Controla tus finanzas personales</p>
+    </div>
+
+    <!-- Login Panel -->
+    <div id="login-panel">
+      <form id="login-form" class="auth-form">
+        <h2 class="form-title">Iniciar Sesion</h2>
+        <div class="form-group">
+          <label for="login-email">Correo electronico</label>
+          <input type="email" id="login-email" placeholder="tu@correo.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="login-password">Contrasena</label>
+          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Entrar</button>
+        <p class="auth-switch">
+          ¿No tienes cuenta? <a href="#" id="go-to-register">Registrate</a>
+        </p>
+      </form>
+    </div>
+
+    <!-- Register Panel -->
+    <div id="register-panel" style="display:none">
+      <form id="register-form" class="auth-form">
+        <h2 class="form-title">Crear Cuenta</h2>
+        <div class="form-group">
+          <label for="register-email">Correo electronico</label>
+          <input type="email" id="register-email" placeholder="tu@correo.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="register-password">Contrasena</label>
+          <input type="password" id="register-password" placeholder="Minimo 6 caracteres" required autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label for="register-confirm-password">Confirmar contrasena</label>
+          <input type="password" id="register-confirm-password" placeholder="Repite la contrasena" required autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Registrarme</button>
+        <p class="auth-switch">
+          ¿Ya tienes cuenta? <a href="#" id="go-to-login">Inicia sesion</a>
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP SCREEN                                                     -->
+<!-- ============================================================ -->
+<div id="app-screen" style="display:none">
+
+  <!-- Sidebar overlay for mobile -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-logo">
+      <span>💰</span>
+      <span class="sidebar-app-name">Finanzas</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-nav="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-nav="accounts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <span>Cuentas</span>
+      </a>
+      <a href="#" class="nav-item" data-nav="transactions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>Movimientos</span>
+      </a>
+      <a href="#" class="nav-item" data-nav="categories">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+        <span>Categorias</span>
+      </a>
+      <a href="#" class="nav-item" data-nav="goals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <span>Metas</span>
+      </a>
+      <a href="#" class="nav-item" data-nav="debts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Deudas</span>
+      </a>
+      <a href="#" class="nav-item" data-nav="export">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Exportar</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="user-email-sidebar" id="user-email-display"></span>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button id="mobile-menu-toggle" class="icon-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="mobile-app-title">💰 Finanzas Claude</span>
+      <button id="logout-btn-mobile" class="icon-btn" onclick="document.getElementById('logout-btn').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </header>
+
+    <!-- ========== DASHBOARD ========== -->
+    <section id="section-dashboard" class="section active">
+      <div class="section-header">
+        <h2>Dashboard</h2>
+        <div class="dashboard-filters">
+          <button class="dashboard-filter-btn active" data-filter="month">Este mes</button>
+          <button class="dashboard-filter-btn" data-filter="week">Esta semana</button>
+          <button class="dashboard-filter-btn" data-filter="year">Este año</button>
+          <button class="dashboard-filter-btn" data-filter="day">Hoy</button>
+          <button class="dashboard-filter-btn" data-filter="custom">Personalizado</button>
+        </div>
+        <div id="custom-date-panel" class="custom-date-panel" style="display:none">
+          <input type="date" id="custom-start-date" />
+          <span>a</span>
+          <input type="date" id="custom-end-date" />
+          <button id="apply-custom-dates" class="btn btn-primary btn-sm">Aplicar</button>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-income">
+          <div class="kpi-icon">⬆️</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Ingresos</span>
+            <span class="kpi-value" id="kpi-income">$0.00</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-expenses">
+          <div class="kpi-icon">⬇️</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Egresos</span>
+            <span class="kpi-value" id="kpi-expenses">$0.00</span>
+          </div>
+        </div>
+        <div id="kpi-balance-card" class="kpi-card kpi-balance">
+          <div class="kpi-icon">⚖️</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Balance</span>
+            <span class="kpi-value" id="kpi-balance">$0.00</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-savings">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Tasa de Ahorro</span>
+            <span class="kpi-value" id="kpi-savings-rate">0%</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-worth">
+          <div class="kpi-icon">💼</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Patrimonio Neto</span>
+            <span class="kpi-value" id="kpi-net-worth">$0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Cards -->
+      <div class="card">
+        <h3 class="card-title">Mis Cuentas</h3>
+        <div id="dashboard-account-cards"></div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3 class="chart-title">Ingresos vs Egresos por Mes</h3>
+          <div class="chart-container">
+            <canvas id="chart-income-expense"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Egresos por Categoria</h3>
+          <div class="chart-container">
+            <canvas id="chart-expense-category"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Saldos por Cuenta</h3>
+          <div class="chart-container">
+            <canvas id="chart-account-balances"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Tendencia Mensual (6 meses)</h3>
+          <div class="chart-container">
+            <canvas id="chart-monthly-trend"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Avance de Metas</h3>
+          <div class="chart-container">
+            <canvas id="chart-goals-progress"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Estado de Deudas</h3>
+          <div class="chart-container">
+            <canvas id="chart-debts"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="card">
+        <h3 class="card-title">Movimientos Recientes</h3>
+        <div id="dashboard-recent-transactions"></div>
+      </div>
+    </section>
+
+    <!-- ========== ACCOUNTS ========== -->
+    <section id="section-accounts" class="section">
+      <div class="section-header">
+        <h2>Mis Cuentas</h2>
+      </div>
+
+      <div class="two-col-layout">
+        <div class="card">
+          <h3 class="card-title">Nueva Cuenta</h3>
+          <form id="account-form">
+            <div class="form-group">
+              <label>Nombre de la cuenta</label>
+              <input type="text" id="account-name" placeholder="ej. BBVA Debito" required />
+            </div>
+            <div class="form-group">
+              <label>Tipo</label>
+              <select id="account-type"></select>
+            </div>
+            <div class="form-group">
+              <label>Saldo inicial (MXN)</label>
+              <input type="number" id="account-initial-balance" placeholder="0.00" min="0" step="0.01" value="0" />
+            </div>
+            <button type="submit" class="btn btn-primary">Crear Cuenta</button>
+          </form>
+        </div>
+
+        <div class="card card-full">
+          <h3 class="card-title">Lista de Cuentas</h3>
+          <div id="accounts-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TRANSACTIONS ========== -->
+    <section id="section-transactions" class="section">
+      <div class="section-header">
+        <h2>Movimientos</h2>
+      </div>
+
+      <!-- Transaction type tabs -->
+      <div class="tabs">
+        <button class="tx-tab-btn active" data-tab="income">Ingreso</button>
+        <button class="tx-tab-btn" data-tab="expense">Egreso</button>
+        <button class="tx-tab-btn" data-tab="transfer">Transferencia</button>
+        <button class="tx-tab-btn" data-tab="debt-payment">Pago Deuda</button>
+        <button class="tx-tab-btn" data-tab="goal-contribution">Aportacion Meta</button>
+      </div>
+
+      <!-- Income Form -->
+      <div id="tx-panel-income" class="tx-tab-panel card active">
+        <h3 class="card-title">Registrar Ingreso</h3>
+        <form id="income-form" class="form-grid">
+          <div class="form-group">
+            <label>Cuenta</label>
+            <select id="income-account" class="select-account" required></select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de ingreso</label>
+            <select id="income-type" class="select-income-type"></select>
+          </div>
+          <div class="form-group">
+            <label>Monto (MXN)</label>
+            <input type="number" id="income-amount" placeholder="0.00" min="0.01" step="0.01" required class="tx-amount" />
+          </div>
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" id="income-date" class="tx-date" required />
+          </div>
+          <div class="form-group form-full">
+            <label>Descripcion (opcional)</label>
+            <input type="text" id="income-description" placeholder="ej. Sueldo quincena" />
+          </div>
+          <div class="form-group form-full">
+            <button type="submit" class="btn btn-primary">Registrar Ingreso</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Expense Form -->
+      <div id="tx-panel-expense" class="tx-tab-panel card">
+        <h3 class="card-title">Registrar Egreso</h3>
+        <form id="expense-form" class="form-grid">
+          <div class="form-group">
+            <label>Cuenta</label>
+            <select id="expense-account" class="select-account" required></select>
+          </div>
+          <div class="form-group">
+            <label>Categoria</label>
+            <select id="expense-category" class="select-expense-category"></select>
+          </div>
+          <div class="form-group">
+            <label>Monto (MXN)</label>
+            <input type="number" id="expense-amount" placeholder="0.00" min="0.01" step="0.01" required class="tx-amount" />
+          </div>
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" id="expense-date" class="tx-date" required />
+          </div>
+          <div class="form-group form-full">
+            <label>Descripcion (opcional)</label>
+            <input type="text" id="expense-description" placeholder="ej. Supermercado" />
+          </div>
+          <div class="form-group form-full">
+            <button type="submit" class="btn btn-primary">Registrar Egreso</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Transfer Form -->
+      <div id="tx-panel-transfer" class="tx-tab-panel card">
+        <h3 class="card-title">Registrar Transferencia</h3>
+        <form id="transfer-form" class="form-grid">
+          <div class="form-group">
+            <label>Cuenta origen</label>
+            <select id="transfer-from" class="select-from-account" required></select>
+          </div>
+          <div class="form-group">
+            <label>Cuenta destino</label>
+            <select id="transfer-to" class="select-to-account" required></select>
+          </div>
+          <div class="form-group">
+            <label>Monto (MXN)</label>
+            <input type="number" id="transfer-amount" placeholder="0.00" min="0.01" step="0.01" required class="tx-amount" />
+          </div>
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" id="transfer-date" class="tx-date" required />
+          </div>
+          <div class="form-group form-full">
+            <label>Descripcion (opcional)</label>
+            <input type="text" id="transfer-description" placeholder="ej. Traspaso a ahorro" />
+          </div>
+          <div class="form-group form-full">
+            <button type="submit" class="btn btn-primary">Registrar Transferencia</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Debt Payment Form -->
+      <div id="tx-panel-debt-payment" class="tx-tab-panel card">
+        <h3 class="card-title">Registrar Pago de Deuda</h3>
+        <form id="debt-payment-form" class="form-grid">
+          <div class="form-group">
+            <label>Cuenta</label>
+            <select id="debt-payment-account" class="select-account" required></select>
+          </div>
+          <div class="form-group">
+            <label>Deuda a pagar</label>
+            <select id="debt-payment-debt" class="select-debt" required></select>
+          </div>
+          <div class="form-group">
+            <label>Monto (MXN)</label>
+            <input type="number" id="debt-payment-amount" placeholder="0.00" min="0.01" step="0.01" required class="tx-amount" />
+          </div>
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" id="debt-payment-date" class="tx-date" required />
+          </div>
+          <div class="form-group form-full">
+            <label>Descripcion (opcional)</label>
+            <input type="text" id="debt-payment-description" placeholder="ej. Abono mensual" />
+          </div>
+          <div class="form-group form-full">
+            <button type="submit" class="btn btn-primary">Registrar Pago</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Goal Contribution Form -->
+      <div id="tx-panel-goal-contribution" class="tx-tab-panel card">
+        <h3 class="card-title">Aportacion a Meta de Ahorro</h3>
+        <form id="goal-contribution-form" class="form-grid">
+          <div class="form-group">
+            <label>Cuenta</label>
+            <select id="goal-contribution-account" class="select-account" required></select>
+          </div>
+          <div class="form-group">
+            <label>Meta</label>
+            <select id="goal-contribution-goal" class="select-goal" required></select>
+          </div>
+          <div class="form-group">
+            <label>Monto (MXN)</label>
+            <input type="number" id="goal-contribution-amount" placeholder="0.00" min="0.01" step="0.01" required class="tx-amount" />
+          </div>
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" id="goal-contribution-date" class="tx-date" required />
+          </div>
+          <div class="form-group form-full">
+            <label>Descripcion (opcional)</label>
+            <input type="text" id="goal-contribution-description" placeholder="ej. Aportacion mensual" />
+          </div>
+          <div class="form-group form-full">
+            <button type="submit" class="btn btn-primary">Registrar Aportacion</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Transaction History -->
+      <div class="card">
+        <div class="card-header-flex">
+          <h3 class="card-title">Historial de Movimientos</h3>
+          <div class="tx-filters">
+            <input type="date" id="tx-filter-start" />
+            <span>a</span>
+            <input type="date" id="tx-filter-end" />
+            <select id="tx-filter-type">
+              <option value="">Todos los tipos</option>
+              <option value="income">Ingresos</option>
+              <option value="expense">Egresos</option>
+              <option value="transfer_out">Transferencias</option>
+              <option value="debt_payment">Pagos de deuda</option>
+              <option value="goal_contribution">Aportaciones</option>
+            </select>
+            <button id="apply-tx-filters" class="btn btn-sm btn-primary">Filtrar</button>
+          </div>
+        </div>
+        <div id="transactions-list"></div>
+      </div>
+    </section>
+
+    <!-- ========== CATEGORIES ========== -->
+    <section id="section-categories" class="section">
+      <div class="section-header">
+        <h2>Categorias</h2>
+      </div>
+
+      <div class="two-col-layout">
+        <!-- Expense Categories -->
+        <div class="card">
+          <h3 class="card-title">Categorias de Gasto</h3>
+          <form id="add-expense-category-form" class="inline-form">
+            <input type="text" id="new-expense-category-name" placeholder="Nueva categoria..." required />
+            <button type="submit" class="btn btn-primary btn-sm">Agregar</button>
+          </form>
+          <div id="expense-categories-list" class="mt-4"></div>
+        </div>
+
+        <!-- Income Types -->
+        <div class="card">
+          <h3 class="card-title">Tipos de Ingreso</h3>
+          <form id="add-income-type-form" class="inline-form">
+            <input type="text" id="new-income-type-name" placeholder="Nuevo tipo de ingreso..." required />
+            <button type="submit" class="btn btn-primary btn-sm">Agregar</button>
+          </form>
+          <div id="income-types-list" class="mt-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== GOALS ========== -->
+    <section id="section-goals" class="section">
+      <div class="section-header">
+        <h2>Metas de Ahorro</h2>
+      </div>
+
+      <div class="two-col-layout">
+        <div class="card">
+          <h3 class="card-title">Nueva Meta</h3>
+          <form id="goal-form">
+            <div class="form-group">
+              <label>Nombre de la meta</label>
+              <input type="text" id="goal-name" placeholder="ej. Fondo de emergencia" required />
+            </div>
+            <div class="form-group">
+              <label>Monto objetivo (MXN)</label>
+              <input type="number" id="goal-target-amount" placeholder="0.00" min="0.01" step="0.01" required />
+            </div>
+            <div class="form-group">
+              <label>Fecha objetivo (opcional)</label>
+              <input type="date" id="goal-target-date" />
+            </div>
+            <div class="form-group">
+              <label>Descripcion (opcional)</label>
+              <textarea id="goal-description" placeholder="Describe tu meta..." rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Crear Meta</button>
+          </form>
+        </div>
+
+        <div class="card card-full">
+          <h3 class="card-title">Mis Metas</h3>
+          <div id="goals-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== DEBTS ========== -->
+    <section id="section-debts" class="section">
+      <div class="section-header">
+        <h2>Mis Deudas</h2>
+      </div>
+
+      <div class="two-col-layout">
+        <div class="card">
+          <h3 class="card-title">Registrar Deuda</h3>
+          <form id="debt-form">
+            <div class="form-group">
+              <label>Nombre de la deuda</label>
+              <input type="text" id="debt-name" placeholder="ej. Credito HSBC" required />
+            </div>
+            <div class="form-group">
+              <label>Monto inicial (MXN)</label>
+              <input type="number" id="debt-initial-amount" placeholder="0.00" min="0.01" step="0.01" required />
+            </div>
+            <div class="form-group">
+              <label>Acreedor (opcional)</label>
+              <input type="text" id="debt-creditor" placeholder="ej. HSBC, Banco Azteca..." />
+            </div>
+            <div class="form-group">
+              <label>Fecha de vencimiento (opcional)</label>
+              <input type="date" id="debt-due-date" />
+            </div>
+            <div class="form-group">
+              <label>Descripcion (opcional)</label>
+              <textarea id="debt-description" placeholder="Notas sobre la deuda..." rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Registrar Deuda</button>
+          </form>
+        </div>
+
+        <div class="card card-full">
+          <h3 class="card-title">Lista de Deudas</h3>
+          <div id="debts-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== EXPORT ========== -->
+    <section id="section-export" class="section">
+      <div class="section-header">
+        <h2>Exportar / Importar</h2>
+      </div>
+
+      <div class="export-grid">
+        <!-- Export JSON -->
+        <div class="card export-card">
+          <div class="export-icon">📦</div>
+          <h3>Respaldo Completo (JSON)</h3>
+          <p>Exporta todos tus datos: cuentas, movimientos, categorias, metas y deudas en formato JSON.</p>
+          <button id="btn-export-json" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Descargar JSON
+          </button>
+        </div>
+
+        <!-- Export CSV -->
+        <div class="card export-card">
+          <div class="export-icon">📊</div>
+          <h3>Movimientos en CSV</h3>
+          <p>Exporta tus movimientos del periodo seleccionado para abrir en Excel o Google Sheets.</p>
+          <div class="form-group">
+            <label>Desde</label>
+            <input type="date" id="export-start-date" />
+          </div>
+          <div class="form-group">
+            <label>Hasta</label>
+            <input type="date" id="export-end-date" />
+          </div>
+          <button id="btn-export-csv" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Descargar CSV
+          </button>
+        </div>
+
+        <!-- Import JSON -->
+        <div class="card export-card">
+          <div class="export-icon">⬆️</div>
+          <h3>Importar Respaldo</h3>
+          <p>Restaura tus datos desde un archivo JSON exportado anteriormente. Puedes agregar o sobrescribir.</p>
+          <input type="file" id="import-json-file" accept=".json" style="display:none" />
+          <button id="btn-import-json" class="btn btn-outline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Seleccionar archivo JSON
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="#" class="bottom-nav-item active" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Inicio</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="accounts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <span>Cuentas</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="transactions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Mover</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="goals">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      <span>Metas</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-nav="debts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>Deudas</span>
+    </a>
+  </nav>
+
+</div>
+
+<!-- Toast Notifications Container -->
+<div id="toast-container"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
