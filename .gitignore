@@ -1,0 +1,4 @@
+.firebaserc
+*.local
+node_modules/
+.env
