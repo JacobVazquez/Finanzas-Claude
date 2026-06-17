@@ -209,9 +209,15 @@
       <!-- Charts Grid -->
       <div class="charts-grid">
         <div class="chart-card">
-          <h3 class="chart-title">Ingresos vs Egresos por Mes</h3>
+          <h3 class="chart-title">Ingresos por Mes</h3>
           <div class="chart-container">
-            <canvas id="chart-income-expense"></canvas>
+            <canvas id="chart-income"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Egresos por Mes</h3>
+          <div class="chart-container">
+            <canvas id="chart-expense"></canvas>
           </div>
         </div>
         <div class="chart-card">
@@ -743,6 +749,17 @@
     </a>
   </nav>
 
+</div>
+
+<!-- ========== MODAL: Edición genérica ========== -->
+<div id="modal-edit" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-edit-title">Editar</h3>
+      <button class="modal-close" onclick="document.getElementById('modal-edit').style.display='none'">&times;</button>
+    </div>
+    <div id="modal-edit-body"></div>
+  </div>
 </div>
 
 <!-- ========== MODAL: Historial de compras ========== -->

@@ -1,6 +1,6 @@
 import { onAuthChange, loginUser, registerUser, logoutUser } from './auth.js';
 import { initUserDoc } from './firestore.js';
-import { loadDashboard, setupDashboardFilters, setupDashboardQuickActions } from './dashboard.js';
+import { loadDashboard, setupDashboardFilters, setupDashboardQuickActions, getActiveFilter } from './dashboard.js';
 import { setupAccountsSection } from './accounts.js';
 import { setupTransactionsSection } from './transactions.js';
 import { setupCategoriesSection, initDefaultCategories, populateCategorySelects } from './categories.js';
@@ -22,13 +22,16 @@ function navigateTo(sectionId) {
     if (el) el.classList.toggle('active', s === sectionId);
   });
 
-  // Update nav active state
   document.querySelectorAll('[data-nav]').forEach(el => {
     el.classList.toggle('active', el.dataset.nav === sectionId);
   });
 
-  // Store current section
   sessionStorage.setItem('currentSection', sectionId);
+
+  // Recargar dashboard al navegar a él para reflejar cambios recientes
+  if (sectionId === 'dashboard' && window._dashboardReload) {
+    window._dashboardReload();
+  }
 }
 
 // ============================================================
@@ -90,6 +93,9 @@ async function initApp(user) {
     // Navigate to stored section or dashboard
     const lastSection = sessionStorage.getItem('currentSection') || 'dashboard';
     navigateTo(lastSection);
+
+    // Expone recarga de dashboard para navegación
+    window._dashboardReload = () => loadDashboard(user.uid, getActiveFilter() ?? 'month', null, null);
 
     // Load dashboard
     await loadDashboard(user.uid, 'month');

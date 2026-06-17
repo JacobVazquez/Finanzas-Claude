@@ -1,5 +1,5 @@
 import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO } from './utils.js';
+import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 
 // ─── Precio actual via Yahoo Finance (sin API key) ───────────────────────────
 
@@ -261,6 +261,7 @@ export async function renderInvestmentsList(uid) {
                 <div class="inv-actions">
                   <button class="btn btn-sm btn-primary" onclick="window._invRefreshPrice('${inv.id}', '${uid}')">↻</button>
                   <button class="btn btn-sm btn-outline" onclick="window._invShowPurchases('${inv.id}', '${uid}')">Compras</button>
+                  <button class="btn btn-sm btn-outline" onclick="window._invEditHolding('${inv.id}', '${uid}')">Editar</button>
                   <button class="btn btn-sm btn-danger" onclick="window._invDelete('${inv.id}', '${uid}')">✕</button>
                 </div>
               </td>
@@ -318,7 +319,10 @@ export async function renderPurchasesModal(uid, investmentId) {
                 <td class="text-right font-mono">${p.feesCents > 0 ? fmtPrice(p.feesCents, inv.fetchedCurrency || inv.currency) : '–'}</td>
                 <td class="text-muted">${p.notes || '–'}</td>
                 <td>
-                  <button class="btn btn-sm btn-danger" onclick="window._invDeletePurchase('${p.id}', '${investmentId}', '${uid}')">✕</button>
+                  <div style="display:flex;gap:.3rem">
+                    <button class="btn btn-sm btn-outline" onclick="window._invEditPurchase('${p.id}', '${investmentId}', '${uid}')">Editar</button>
+                    <button class="btn btn-sm btn-danger" onclick="window._invDeletePurchase('${p.id}', '${investmentId}', '${uid}')">✕</button>
+                  </div>
                 </td>
               </tr>
             `).join('')}
@@ -360,6 +364,7 @@ export async function setupInvestmentsSection(uid) {
         });
         showToast('Acción agregada', 'success');
         holdingForm.reset();
+        dispatchDataChange();
         await refreshHoldingSelect();
         await renderInvestmentsList(uid);
       } catch (err) {
@@ -410,6 +415,7 @@ export async function setupInvestmentsSection(uid) {
         showToast('Compra registrada', 'success');
         purchaseForm.reset();
         document.getElementById('purchase-date').value = todayISO();
+        dispatchDataChange();
         await renderInvestmentsList(uid);
       } catch (err) {
         showToast(err.message, 'error');
@@ -475,6 +481,7 @@ export async function setupInvestmentsSection(uid) {
     try {
       await deleteInvestment(uid, id);
       showToast('Inversión eliminada', 'success');
+      dispatchDataChange();
       await renderInvestmentsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
@@ -486,11 +493,106 @@ export async function setupInvestmentsSection(uid) {
     try {
       await deletePurchase(uid, purchaseId);
       showToast('Compra eliminada', 'success');
+      dispatchDataChange();
       await renderPurchasesModal(uid, investmentId);
       await renderInvestmentsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
     }
+  };
+
+  window._invEditHolding = async (id, uid) => {
+    const investments = await readDocs(uid, 'investments');
+    const inv = investments.find(i => i.id === id);
+    if (!inv) return;
+
+    openEditModal('Editar acción / ETF', `
+      <form id="edit-holding-form" class="form-grid" style="padding:1.25rem 1.5rem 1.5rem">
+        <div class="form-group form-full">
+          <label>Nombre de la empresa</label>
+          <input type="text" id="eh-name" value="${inv.name}" required />
+        </div>
+        <div class="form-group form-full modal-actions">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    `);
+
+    document.getElementById('edit-holding-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await updateDocById(uid, 'investments', id, { name: document.getElementById('eh-name').value.trim() });
+        showToast('Acción actualizada', 'success');
+        closeEditModal();
+        dispatchDataChange();
+        await renderInvestmentsList(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  };
+
+  window._invEditPurchase = async (purchaseId, investmentId, uid) => {
+    const purchases = await readDocs(uid, 'investment_purchases');
+    const p = purchases.find(x => x.id === purchaseId);
+    if (!p) return;
+
+    openEditModal('Editar compra', `
+      <form id="edit-purchase-form" class="form-grid" style="padding:1.25rem 1.5rem 1.5rem">
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="ep-date" value="${p.date}" required />
+        </div>
+        <div class="form-group">
+          <label>Precio por acción</label>
+          <input type="number" id="ep-price" value="${fromCents(p.pricePerShareCents)}" min="0.0001" step="0.0001" required />
+        </div>
+        <div class="form-group">
+          <label>Cantidad de acciones</label>
+          <input type="number" id="ep-shares" value="${p.shares}" min="0.0001" step="${p.isFractional ? '0.0001' : '1'}" required />
+        </div>
+        <div class="form-group">
+          <label>Comisión</label>
+          <input type="number" id="ep-fees" value="${fromCents(p.feesCents || 0)}" min="0" step="0.01" />
+        </div>
+        <div class="form-group inv-fractional-check">
+          <label class="checkbox-label">
+            <input type="checkbox" id="ep-fractional" ${p.isFractional ? 'checked' : ''} />
+            <span>Fraccionada</span>
+          </label>
+        </div>
+        <div class="form-group form-full">
+          <label>Notas</label>
+          <input type="text" id="ep-notes" value="${p.notes || ''}" />
+        </div>
+        <div class="form-group form-full modal-actions">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    `);
+
+    document.getElementById('edit-purchase-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await updateDocById(uid, 'investment_purchases', purchaseId, {
+          date: document.getElementById('ep-date').value,
+          pricePerShareCents: toCents(document.getElementById('ep-price').value),
+          shares: Number(document.getElementById('ep-shares').value),
+          feesCents: toCents(document.getElementById('ep-fees').value || 0),
+          isFractional: document.getElementById('ep-fractional').checked,
+          notes: document.getElementById('ep-notes').value
+        });
+        showToast('Compra actualizada', 'success');
+        closeEditModal();
+        dispatchDataChange();
+        await renderPurchasesModal(uid, investmentId);
+        await renderInvestmentsList(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
   };
 
   await renderInvestmentsList(uid);

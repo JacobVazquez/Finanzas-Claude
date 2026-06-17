@@ -168,6 +168,37 @@ export function lastDayOfMonth() {
 }
 
 /**
+ * Dispara el evento global de cambio de datos para que el dashboard se refresque
+ */
+export function dispatchDataChange() {
+  window.dispatchEvent(new CustomEvent('finanzas:changed'));
+}
+
+/**
+ * Abre el modal de edicion generico
+ */
+export function openEditModal(title, bodyHTML) {
+  const modal = document.getElementById('modal-edit');
+  if (!modal) return;
+  document.getElementById('modal-edit-title').textContent = title;
+  document.getElementById('modal-edit-body').innerHTML = bodyHTML;
+  modal.style.display = 'flex';
+
+  // Cerrar con Escape o clic fuera
+  const onKey = (e) => { if (e.key === 'Escape') { closeEditModal(); document.removeEventListener('keydown', onKey); } };
+  document.addEventListener('keydown', onKey);
+  modal.onclick = (e) => { if (e.target === modal) closeEditModal(); };
+}
+
+/**
+ * Cierra el modal de edicion generico
+ */
+export function closeEditModal() {
+  const el = document.getElementById('modal-edit');
+  if (el) el.style.display = 'none';
+}
+
+/**
  * Trunca texto largo
  * @param {string} text
  * @param {number} maxLen

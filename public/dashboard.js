@@ -1,8 +1,16 @@
 import { readDocs } from './firestore.js';
-import { formatMXN, firstDayOfMonth, lastDayOfMonth, todayISO, dateToISO, showToast } from './utils.js';
+import { formatMXN, firstDayOfMonth, lastDayOfMonth, todayISO, dateToISO, showToast, dispatchDataChange } from './utils.js';
 import { getTransactions, renderTransactionsList, addIncome, addExpense } from './transactions.js';
 import { getAccounts, calculateAccountBalance, renderAccountCards } from './accounts.js';
 import { getExpenseCategories, getIncomeTypes } from './categories.js';
+
+// Estado del filtro activo en el dashboard
+let _activeFilter = 'month';
+let _customStart = null;
+let _customEnd = null;
+let _dashboardUid = null;
+
+export function getActiveFilter() { return _activeFilter; }
 
 /**
  * Calcula KPIs para un periodo dado
@@ -281,6 +289,7 @@ export async function setupDashboardQuickActions(uid) {
         qiForm.reset();
         document.getElementById('qi-date').value = todayISO();
         closeModal('modal-quick-income');
+        dispatchDataChange();
         await loadDashboard(uid);
       } catch (err) {
         showToast(err.message, 'error');
@@ -309,6 +318,7 @@ export async function setupDashboardQuickActions(uid) {
         qeForm.reset();
         document.getElementById('qe-date').value = todayISO();
         closeModal('modal-quick-expense');
+        dispatchDataChange();
         await loadDashboard(uid);
       } catch (err) {
         showToast(err.message, 'error');
@@ -320,15 +330,18 @@ export async function setupDashboardQuickActions(uid) {
 }
 
 /**
- * Inicializa los filtros del dashboard
+ * Inicializa los filtros del dashboard y el listener de auto-refresh
  */
 export function setupDashboardFilters(uid) {
+  _dashboardUid = uid;
+
   const filterBtns = document.querySelectorAll('.dashboard-filter-btn');
   filterBtns.forEach(btn => {
     btn.addEventListener('click', async () => {
       filterBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const filter = btn.dataset.filter;
+      _activeFilter = filter;
       const customPanel = document.getElementById('custom-date-panel');
       if (customPanel) {
         customPanel.style.display = filter === 'custom' ? 'flex' : 'none';
@@ -348,7 +361,16 @@ export function setupDashboardFilters(uid) {
         showToast('Selecciona las fechas de inicio y fin', 'error');
         return;
       }
+      _customStart = start;
+      _customEnd = end;
       await loadDashboard(uid, 'custom', start, end);
     });
   }
+
+  // Auto-refresh: recarga el dashboard cuando cualquier modulo cambia datos
+  window.addEventListener('finanzas:changed', async () => {
+    const dashSection = document.getElementById('section-dashboard');
+    if (!dashSection?.classList.contains('active')) return;
+    await loadDashboard(uid, _activeFilter, _customStart, _customEnd);
+  });
 }

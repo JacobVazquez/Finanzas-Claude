@@ -34,18 +34,10 @@ const COLORS = {
 };
 
 /**
- * Renderiza grafica de barras: ingresos vs egresos por mes
+ * Agrupa transacciones por mes y retorna datos para graficas
  */
-export async function renderIncomeExpenseChart(uid, startDate, endDate) {
-  const canvas = document.getElementById('chart-income-expense');
-  if (!canvas) return;
-
-  const Chart = getChart();
-  if (!Chart) return;
-
+async function buildMonthlyData(uid, startDate, endDate) {
   const transactions = await getTransactions(uid, { startDate, endDate });
-
-  // Group by month
   const months = {};
   for (const t of transactions) {
     const month = t.date ? t.date.substring(0, 7) : 'unknown';
@@ -55,43 +47,73 @@ export async function renderIncomeExpenseChart(uid, startDate, endDate) {
       months[month].expense += t.amount;
     }
   }
-
-  const labels = Object.keys(months).sort().map(m => {
-    const [y, mo] = m.split('-');
-    const date = new Date(parseInt(y), parseInt(mo) - 1, 1);
-    return date.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
-  });
   const sortedKeys = Object.keys(months).sort();
-  const incomes = sortedKeys.map(k => fromCents(months[k].income));
-  const expenses = sortedKeys.map(k => fromCents(months[k].expense));
+  const labels = sortedKeys.map(m => {
+    const [y, mo] = m.split('-');
+    return new Date(parseInt(y), parseInt(mo) - 1, 1)
+      .toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+  });
+  return { sortedKeys, labels, months };
+}
 
-  destroyChart('income-expense');
-  chartInstances['income-expense'] = new Chart(canvas, {
+const barTooltip = {
+  callbacks: {
+    label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+  }
+};
+
+/**
+ * Gráfica de barras: Ingresos por mes
+ */
+export async function renderIncomeChart(uid, startDate, endDate) {
+  const canvas = document.getElementById('chart-income');
+  if (!canvas) return;
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const { sortedKeys, labels, months } = await buildMonthlyData(uid, startDate, endDate);
+  const incomes = sortedKeys.map(k => fromCents(months[k].income));
+
+  destroyChart('income');
+  chartInstances['income'] = new Chart(canvas, {
     type: 'bar',
     data: {
       labels,
-      datasets: [
-        { label: 'Ingresos', data: incomes, backgroundColor: COLORS.success + 'CC', borderColor: COLORS.success, borderWidth: 1 },
-        { label: 'Egresos', data: expenses, backgroundColor: COLORS.danger + 'CC', borderColor: COLORS.danger, borderWidth: 1 }
-      ]
+      datasets: [{ label: 'Ingresos', data: incomes, backgroundColor: COLORS.success + 'CC', borderColor: COLORS.success, borderWidth: 1, borderRadius: 4 }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { callback: v => '$' + v.toLocaleString('es-MX') }
-        }
-      }
+      plugins: { legend: { display: false }, tooltip: barTooltip },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
+    }
+  });
+}
+
+/**
+ * Gráfica de barras: Egresos por mes
+ */
+export async function renderExpenseChart(uid, startDate, endDate) {
+  const canvas = document.getElementById('chart-expense');
+  if (!canvas) return;
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const { sortedKeys, labels, months } = await buildMonthlyData(uid, startDate, endDate);
+  const expenses = sortedKeys.map(k => fromCents(months[k].expense));
+
+  destroyChart('expense');
+  chartInstances['expense'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Egresos', data: expenses, backgroundColor: COLORS.danger + 'CC', borderColor: COLORS.danger, borderWidth: 1, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: barTooltip },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
     }
   });
 }
@@ -350,7 +372,8 @@ export async function renderMonthlyTrendChart(uid) {
  */
 export async function updateAllCharts(uid, startDate, endDate) {
   await Promise.all([
-    renderIncomeExpenseChart(uid, startDate, endDate),
+    renderIncomeChart(uid, startDate, endDate),
+    renderExpenseChart(uid, startDate, endDate),
     renderExpenseByCategoryChart(uid, startDate, endDate),
     renderAccountBalancesChart(uid),
     renderGoalsProgressChart(uid),

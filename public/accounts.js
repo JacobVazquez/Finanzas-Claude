@@ -1,5 +1,5 @@
 import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, showToast, validateAmount } from './utils.js';
+import { formatMXN, toCents, fromCents, showToast, validateAmount, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 
 export const ACCOUNT_TYPES = [
   { value: 'efectivo', label: 'Efectivo' },
@@ -198,18 +198,19 @@ export function setupAccountsSection(uid) {
       await createAccount(uid, { name, type, initialBalance });
       showToast('Cuenta creada correctamente', 'success');
       form.reset();
+      dispatchDataChange();
       await renderAccountsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
     }
   });
 
-  // Global handlers for delete/edit
   window._deleteAccount = async (id, uid) => {
     if (!confirm('¿Eliminar esta cuenta? Esta accion no se puede deshacer.')) return;
     try {
       await deleteAccount(uid, id);
       showToast('Cuenta eliminada', 'success');
+      dispatchDataChange();
       await renderAccountsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
@@ -218,17 +219,45 @@ export function setupAccountsSection(uid) {
 
   window._editAccount = async (id, uid) => {
     const accounts = await getAccounts(uid);
-    const account = accounts.find(a => a.id === id);
-    if (!account) return;
-    const newName = prompt('Nuevo nombre:', account.name);
-    if (!newName) return;
-    try {
-      await updateAccount(uid, id, { name: newName.trim() });
-      showToast('Cuenta actualizada', 'success');
-      await renderAccountsList(uid);
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    const a = accounts.find(ac => ac.id === id);
+    if (!a) return;
+
+    const typeOpts = ACCOUNT_TYPES.map(t =>
+      `<option value="${t.value}" ${t.value === a.type ? 'selected' : ''}>${t.label}</option>`
+    ).join('');
+
+    openEditModal('Editar cuenta', `
+      <form id="edit-account-form" class="form-grid" style="padding:1.25rem 1.5rem 1.5rem">
+        <div class="form-group form-full">
+          <label>Nombre</label>
+          <input type="text" id="ea-name" value="${a.name}" required />
+        </div>
+        <div class="form-group form-full">
+          <label>Tipo</label>
+          <select id="ea-type">${typeOpts}</select>
+        </div>
+        <div class="form-group form-full modal-actions">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    `);
+
+    document.getElementById('edit-account-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await updateAccount(uid, id, {
+          name: document.getElementById('ea-name').value.trim(),
+          type: document.getElementById('ea-type').value
+        });
+        showToast('Cuenta actualizada', 'success');
+        closeEditModal();
+        dispatchDataChange();
+        await renderAccountsList(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
   };
 
   renderAccountsList(uid);

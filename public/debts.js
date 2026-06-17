@@ -1,5 +1,5 @@
 import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate } from './utils.js';
+import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 
 /**
  * Crea una nueva deuda
@@ -118,6 +118,7 @@ export async function renderDebtsList(uid) {
           </div>
           ${d.dueDate ? `<p class="debt-due-date">Vencimiento: ${formatDate(d.dueDate)}</p>` : ''}
           <div class="debt-actions">
+            <button class="btn btn-sm btn-outline" onclick="window._editDebt('${d.id}', '${uid}')">Editar</button>
             <button class="btn btn-sm btn-danger" onclick="window._deleteDebt('${d.id}', '${uid}')">Eliminar</button>
           </div>
         </div>
@@ -145,6 +146,7 @@ export function setupDebtsSection(uid) {
       });
       showToast('Deuda registrada correctamente', 'success');
       form.reset();
+      dispatchDataChange();
       await renderDebtsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
@@ -156,10 +158,60 @@ export function setupDebtsSection(uid) {
     try {
       await deleteDebt(uid, id);
       showToast('Deuda eliminada', 'success');
+      dispatchDataChange();
       await renderDebtsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
     }
+  };
+
+  window._editDebt = async (id, uid) => {
+    const debts = await readDocs(uid, 'debts');
+    const d = debts.find(x => x.id === id);
+    if (!d) return;
+
+    openEditModal('Editar deuda', `
+      <form id="edit-debt-form" class="form-grid" style="padding:1.25rem 1.5rem 1.5rem">
+        <div class="form-group form-full">
+          <label>Nombre</label>
+          <input type="text" id="ed-name" value="${d.name}" required />
+        </div>
+        <div class="form-group">
+          <label>Acreedor</label>
+          <input type="text" id="ed-creditor" value="${d.creditor || ''}" />
+        </div>
+        <div class="form-group">
+          <label>Fecha de vencimiento</label>
+          <input type="date" id="ed-due" value="${d.dueDate || ''}" />
+        </div>
+        <div class="form-group form-full">
+          <label>Descripción / notas</label>
+          <textarea id="ed-description" rows="2">${d.description || ''}</textarea>
+        </div>
+        <div class="form-group form-full modal-actions">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    `);
+
+    document.getElementById('edit-debt-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await updateDebt(uid, id, {
+          name: document.getElementById('ed-name').value.trim(),
+          creditor: document.getElementById('ed-creditor').value,
+          dueDate: document.getElementById('ed-due').value || null,
+          description: document.getElementById('ed-description').value
+        });
+        showToast('Deuda actualizada', 'success');
+        closeEditModal();
+        dispatchDataChange();
+        await renderDebtsList(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
   };
 
   renderDebtsList(uid);

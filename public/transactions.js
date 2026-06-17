@@ -1,5 +1,5 @@
 import { createDoc, readDocs, deleteDocById, updateDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO } from './utils.js';
+import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 import { getAccounts } from './accounts.js';
 import { getExpenseCategories, getIncomeTypes, populateCategorySelects } from './categories.js';
 import { getDebts } from './debts.js';
@@ -144,6 +144,20 @@ export async function addGoalContribution(uid, { accountId, goalId, amount, date
 }
 
 /**
+ * Actualiza un movimiento de tipo ingreso o egreso
+ */
+export async function updateTransaction(uid, id, data) {
+  const update = {};
+  if (data.amount !== undefined) update.amount = toCents(data.amount);
+  if (data.date !== undefined) update.date = data.date;
+  if (data.description !== undefined) update.description = data.description;
+  if (data.accountId !== undefined) update.accountId = data.accountId;
+  if (data.categoryId !== undefined) update.categoryId = data.categoryId;
+  if (data.incomeTypeId !== undefined) update.incomeTypeId = data.incomeTypeId;
+  await updateDocById(uid, 'transactions', id, update);
+}
+
+/**
  * Obtiene movimientos con filtros opcionales
  */
 export async function getTransactions(uid, filters = {}) {
@@ -266,9 +280,14 @@ export async function renderTransactionsList(uid, filters = {}) {
                   ${isPositive ? '+' : '-'}${formatMXN(t.amount)}
                 </td>
                 <td>
-                  ${!t.transferGroupId || t.type === 'transfer_out' ?
-                    `<button class="btn btn-sm btn-danger" onclick="window._deleteTx('${t.id}', '${uid}')">Eliminar</button>` :
-                    ''}
+                  <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+                    ${['income','expense'].includes(t.type)
+                      ? `<button class="btn btn-sm btn-outline" onclick="window._editTx('${t.id}', '${uid}')">Editar</button>`
+                      : ''}
+                    ${!t.transferGroupId || t.type === 'transfer_out'
+                      ? `<button class="btn btn-sm btn-danger" onclick="window._deleteTx('${t.id}', '${uid}')">Eliminar</button>`
+                      : ''}
+                  </div>
                 </td>
               </tr>
             `;
@@ -348,6 +367,7 @@ export async function setupTransactionsSection(uid) {
         showToast('Ingreso registrado', 'success');
         incomeForm.reset();
         document.getElementById('income-date').value = todayISO();
+        dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
         showToast(err.message, 'error');
@@ -371,6 +391,7 @@ export async function setupTransactionsSection(uid) {
         showToast('Egreso registrado', 'success');
         expenseForm.reset();
         document.getElementById('expense-date').value = todayISO();
+        dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
         showToast(err.message, 'error');
@@ -394,6 +415,7 @@ export async function setupTransactionsSection(uid) {
         showToast('Transferencia registrada', 'success');
         transferForm.reset();
         document.getElementById('transfer-date').value = todayISO();
+        dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
         showToast(err.message, 'error');
@@ -417,6 +439,7 @@ export async function setupTransactionsSection(uid) {
         showToast('Pago de deuda registrado', 'success');
         debtForm.reset();
         document.getElementById('debt-payment-date').value = todayISO();
+        dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
         showToast(err.message, 'error');
@@ -440,6 +463,7 @@ export async function setupTransactionsSection(uid) {
         showToast('Aportacion a meta registrada', 'success');
         goalForm.reset();
         document.getElementById('goal-contribution-date').value = todayISO();
+        dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
         showToast(err.message, 'error');
@@ -464,10 +488,94 @@ export async function setupTransactionsSection(uid) {
     try {
       await deleteTransaction(uid, id);
       showToast('Movimiento eliminado', 'success');
+      dispatchDataChange();
       await renderTransactionsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
     }
+  };
+
+  // Global edit handler
+  window._editTx = async (id, uid) => {
+    const [transactions, accounts, categories, incomeTypes] = await Promise.all([
+      getTransactions(uid, {}),
+      getAccounts(uid),
+      getExpenseCategories(uid),
+      getIncomeTypes(uid)
+    ]);
+    const t = transactions.find(tx => tx.id === id);
+    if (!t) return;
+
+    if (!['income', 'expense'].includes(t.type)) {
+      openEditModal('No editable', `
+        <div style="padding:1.25rem 1.5rem 1.5rem">
+          <p>Los movimientos de tipo <strong>${TRANSACTION_TYPES[t.type]}</strong> no se pueden editar directamente porque afectan otros registros.</p>
+          <p style="margin-top:.5rem;color:var(--text-muted)">Elimínalo y vuelve a registrarlo con los datos correctos.</p>
+          <div class="modal-actions" style="margin-top:1.25rem">
+            <button class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Cerrar</button>
+          </div>
+        </div>
+      `);
+      return;
+    }
+
+    const acctOptions = accounts.map(a => `<option value="${a.id}" ${a.id === t.accountId ? 'selected' : ''}>${a.name}</option>`).join('');
+    const isIncome = t.type === 'income';
+    const extraOptions = isIncome
+      ? incomeTypes.map(it => `<option value="${it.id}" ${it.id === t.incomeTypeId ? 'selected' : ''}>${it.name}</option>`).join('')
+      : categories.map(c => `<option value="${c.id}" ${c.id === t.categoryId ? 'selected' : ''}>${c.name}</option>`).join('');
+
+    openEditModal(`Editar ${TRANSACTION_TYPES[t.type]}`, `
+      <form id="edit-tx-form" class="form-grid" style="padding:1.25rem 1.5rem 1.5rem">
+        <div class="form-group">
+          <label>Cuenta</label>
+          <select id="etx-account" required>${acctOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>${isIncome ? 'Tipo de ingreso' : 'Categoría'}</label>
+          <select id="etx-extra">
+            <option value="">-- Sin ${isIncome ? 'tipo' : 'categoría'} --</option>
+            ${extraOptions}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Monto (MXN)</label>
+          <input type="number" id="etx-amount" value="${fromCents(t.amount)}" min="0.01" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="etx-date" value="${t.date}" required />
+        </div>
+        <div class="form-group form-full">
+          <label>Descripción</label>
+          <input type="text" id="etx-description" value="${t.description || ''}" />
+        </div>
+        <div class="form-group form-full modal-actions">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </div>
+      </form>
+    `);
+
+    document.getElementById('edit-tx-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const extraVal = document.getElementById('etx-extra').value;
+        await updateTransaction(uid, id, {
+          accountId: document.getElementById('etx-account').value,
+          amount: document.getElementById('etx-amount').value,
+          date: document.getElementById('etx-date').value,
+          description: document.getElementById('etx-description').value,
+          ...(isIncome ? { incomeTypeId: extraVal || null } : { categoryId: extraVal || null })
+        });
+        showToast('Movimiento actualizado', 'success');
+        closeEditModal();
+        dispatchDataChange();
+        await renderTransactionsList(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
   };
 
   await renderTransactionsList(uid);
