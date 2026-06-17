@@ -1127,11 +1127,10 @@ textarea { resize: vertical; min-height: 60px; }
   }
 
   .sidebar-overlay {
-    display: block;
+    display: none;
   }
 
-  .sidebar.open ~ .sidebar-overlay,
-  .sidebar-overlay:not(.hidden) {
+  .sidebar.open ~ .sidebar-overlay {
     display: block;
   }
 
