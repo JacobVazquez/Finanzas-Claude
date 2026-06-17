@@ -1,10 +1,12 @@
-// Reemplaza estos valores con tu configuracion real de Firebase
-// Obtenla en: Firebase Console > Configuracion del proyecto > Tus apps > Web
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+
 export const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_PROJECT_ID.firebaseapp.com",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_PROJECT_ID.appspot.com",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyCOfnwuhG6IUvEC_nQVxUIOnFngUAIQ5No",
+  authDomain: "finanzas-calude.firebaseapp.com",
+  projectId: "finanzas-calude",
+  storageBucket: "finanzas-calude.firebasestorage.app",
+  messagingSenderId: "815689680305",
+  appId: "1:815689680305:web:c5119119992d5448d6a990"
 };
+
+export const app = initializeApp(firebaseConfig);
