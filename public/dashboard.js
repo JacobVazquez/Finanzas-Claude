@@ -1,7 +1,8 @@
 import { readDocs } from './firestore.js';
 import { formatMXN, firstDayOfMonth, lastDayOfMonth, todayISO, dateToISO, showToast } from './utils.js';
-import { getTransactions, renderTransactionsList } from './transactions.js';
+import { getTransactions, renderTransactionsList, addIncome, addExpense } from './transactions.js';
 import { getAccounts, calculateAccountBalance, renderAccountCards } from './accounts.js';
+import { getExpenseCategories, getIncomeTypes } from './categories.js';
 
 /**
  * Calcula KPIs para un periodo dado
@@ -180,6 +181,141 @@ export async function loadDashboard(uid, filter = 'month', customStart, customEn
   } catch (err) {
     console.error('Error cargando dashboard:', err);
     showToast('Error cargando el dashboard', 'error');
+  }
+}
+
+/**
+ * Abre un modal por id
+ */
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'flex';
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+/**
+ * Popula los selects de cuentas/categorias dentro de los modales rapidos
+ */
+async function populateModalSelects(uid) {
+  const [accounts, categories, incomeTypes] = await Promise.all([
+    getAccounts(uid),
+    getExpenseCategories(uid),
+    getIncomeTypes(uid)
+  ]);
+
+  const accountOptions = '<option value="">-- Seleccionar cuenta --</option>' +
+    accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+
+  document.querySelectorAll('.select-account-modal').forEach(sel => {
+    sel.innerHTML = accountOptions;
+  });
+
+  const expCatOptions = '<option value="">-- Sin categoria --</option>' +
+    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.querySelectorAll('.select-expense-category-modal').forEach(sel => {
+    sel.innerHTML = expCatOptions;
+  });
+
+  const incTypeOptions = '<option value="">-- Sin tipo --</option>' +
+    incomeTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  document.querySelectorAll('.select-income-type-modal').forEach(sel => {
+    sel.innerHTML = incTypeOptions;
+  });
+}
+
+/**
+ * Configura los botones de acceso rapido y sus modales en el dashboard
+ */
+export async function setupDashboardQuickActions(uid) {
+  await populateModalSelects(uid);
+
+  // Fechas por defecto
+  const today = todayISO();
+  const qiDate = document.getElementById('qi-date');
+  const qeDate = document.getElementById('qe-date');
+  if (qiDate) qiDate.value = today;
+  if (qeDate) qeDate.value = today;
+
+  // Abrir modales
+  document.getElementById('btn-quick-income')?.addEventListener('click', () => openModal('modal-quick-income'));
+  document.getElementById('btn-quick-expense')?.addEventListener('click', () => openModal('modal-quick-expense'));
+
+  // Cerrar modales (botones con data-close y click fuera)
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
+
+  // Tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('modal-quick-income');
+      closeModal('modal-quick-expense');
+    }
+  });
+
+  // Form ingreso rapido
+  const qiForm = document.getElementById('quick-income-form');
+  if (qiForm) {
+    qiForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = qiForm.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      try {
+        await addIncome(uid, {
+          accountId: document.getElementById('qi-account').value,
+          incomeTypeId: document.getElementById('qi-type').value,
+          amount: document.getElementById('qi-amount').value,
+          date: document.getElementById('qi-date').value,
+          description: document.getElementById('qi-description').value
+        });
+        showToast('Ingreso registrado', 'success');
+        qiForm.reset();
+        document.getElementById('qi-date').value = todayISO();
+        closeModal('modal-quick-income');
+        await loadDashboard(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // Form egreso rapido
+  const qeForm = document.getElementById('quick-expense-form');
+  if (qeForm) {
+    qeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = qeForm.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      try {
+        await addExpense(uid, {
+          accountId: document.getElementById('qe-account').value,
+          categoryId: document.getElementById('qe-category').value,
+          amount: document.getElementById('qe-amount').value,
+          date: document.getElementById('qe-date').value,
+          description: document.getElementById('qe-description').value
+        });
+        showToast('Egreso registrado', 'success');
+        qeForm.reset();
+        document.getElementById('qe-date').value = todayISO();
+        closeModal('modal-quick-expense');
+        await loadDashboard(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
   }
 }
 

@@ -1,6 +1,6 @@
 import { onAuthChange, loginUser, registerUser, logoutUser } from './auth.js';
 import { initUserDoc } from './firestore.js';
-import { loadDashboard, setupDashboardFilters } from './dashboard.js';
+import { loadDashboard, setupDashboardFilters, setupDashboardQuickActions } from './dashboard.js';
 import { setupAccountsSection } from './accounts.js';
 import { setupTransactionsSection } from './transactions.js';
 import { setupCategoriesSection, initDefaultCategories, populateCategorySelects } from './categories.js';
@@ -77,6 +77,7 @@ async function initApp(user) {
 
     // Setup all sections
     setupDashboardFilters(user.uid);
+    await setupDashboardQuickActions(user.uid);
     setupAccountsSection(user.uid);
     await setupTransactionsSection(user.uid);
     setupGoalsSection(user.uid);
