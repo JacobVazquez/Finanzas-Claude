@@ -15,7 +15,14 @@
   <div class="auth-bg"></div>
   <div class="auth-card">
     <div class="auth-logo">
-      <span class="auth-logo-icon">💰</span>
+      <div class="auth-logo-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="14" width="4" height="8" rx="1" fill="#D4AF37"/>
+          <rect x="9" y="9" width="4" height="13" rx="1" fill="#D4AF37" opacity="0.8"/>
+          <rect x="16" y="4" width="4" height="18" rx="1" fill="#D4AF37" opacity="0.6"/>
+          <path d="M3 6 L9 3 L16 7 L22 2" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <h1 class="auth-title">Finanzas Claude</h1>
       <p class="auth-subtitle">Controla tus finanzas personales</p>
     </div>
@@ -75,8 +82,16 @@
   <!-- Sidebar -->
   <aside id="sidebar" class="sidebar">
     <div class="sidebar-logo">
-      <span>💰</span>
-      <span class="sidebar-app-name">Finanzas</span>
+      <div class="sidebar-logo-row">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="14" width="4" height="8" rx="1" fill="#D4AF37"/>
+          <rect x="9" y="9" width="4" height="13" rx="1" fill="#D4AF37" opacity="0.8"/>
+          <rect x="16" y="4" width="4" height="18" rx="1" fill="#D4AF37" opacity="0.6"/>
+          <path d="M3 6 L9 3 L16 7 L22 2" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="sidebar-brand-name">Finanzas</span>
+      </div>
+      <span class="sidebar-tagline">Tu dinero, tu futuro.</span>
     </div>
     <nav class="sidebar-nav">
       <a href="#" class="nav-item active" data-nav="dashboard">
@@ -126,7 +141,7 @@
       <button id="mobile-menu-toggle" class="icon-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <span class="mobile-app-title">💰 Finanzas Claude</span>
+      <span class="mobile-app-title">Finanzas Claude</span>
       <button id="logout-btn-mobile" class="icon-btn" onclick="document.getElementById('logout-btn').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
@@ -164,35 +179,45 @@
       <!-- KPI Cards -->
       <div class="kpi-grid">
         <div class="kpi-card kpi-income">
-          <div class="kpi-icon">⬆️</div>
+          <div class="kpi-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          </div>
           <div class="kpi-info">
             <span class="kpi-label">Ingresos</span>
             <span class="kpi-value" id="kpi-income">$0.00</span>
           </div>
         </div>
         <div class="kpi-card kpi-expenses">
-          <div class="kpi-icon">⬇️</div>
+          <div class="kpi-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          </div>
           <div class="kpi-info">
             <span class="kpi-label">Egresos</span>
             <span class="kpi-value" id="kpi-expenses">$0.00</span>
           </div>
         </div>
         <div id="kpi-balance-card" class="kpi-card kpi-balance">
-          <div class="kpi-icon">⚖️</div>
+          <div class="kpi-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><path d="M3 9l9-7 9 7"/><path d="M3 15h8l-8 6"/><path d="M21 15h-8l8 6"/></svg>
+          </div>
           <div class="kpi-info">
             <span class="kpi-label">Balance</span>
             <span class="kpi-value" id="kpi-balance">$0.00</span>
           </div>
         </div>
         <div class="kpi-card kpi-savings">
-          <div class="kpi-icon">💰</div>
+          <div class="kpi-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
           <div class="kpi-info">
             <span class="kpi-label">Tasa de Ahorro</span>
             <span class="kpi-value" id="kpi-savings-rate">0%</span>
           </div>
         </div>
         <div class="kpi-card kpi-worth">
-          <div class="kpi-icon">💼</div>
+          <div class="kpi-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          </div>
           <div class="kpi-info">
             <span class="kpi-label">Patrimonio Neto</span>
             <span class="kpi-value" id="kpi-net-worth">$0.00</span>
@@ -681,7 +706,9 @@
       <div class="export-grid">
         <!-- Export JSON -->
         <div class="card export-card">
-          <div class="export-icon">📦</div>
+          <div class="export-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
           <h3>Respaldo Completo (JSON)</h3>
           <p>Exporta todos tus datos: cuentas, movimientos, categorias, metas y deudas en formato JSON.</p>
           <button id="btn-export-json" class="btn btn-primary">
@@ -692,7 +719,9 @@
 
         <!-- Export CSV -->
         <div class="card export-card">
-          <div class="export-icon">📊</div>
+          <div class="export-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg>
+          </div>
           <h3>Movimientos en CSV</h3>
           <p>Exporta tus movimientos del periodo seleccionado para abrir en Excel o Google Sheets.</p>
           <div class="form-group">
@@ -711,7 +740,9 @@
 
         <!-- Import JSON -->
         <div class="card export-card">
-          <div class="export-icon">⬆️</div>
+          <div class="export-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
           <h3>Importar Respaldo</h3>
           <p>Restaura tus datos desde un archivo JSON exportado anteriormente. Puedes agregar o sobrescribir.</p>
           <input type="file" id="import-json-file" accept=".json" style="display:none" />
