@@ -506,7 +506,6 @@ export async function updateAllCharts(uid, startDate, endDate) {
     renderExpenseChart(uid, startDate, endDate),
     renderExpenseByCategoryChart(uid, startDate, endDate),
     renderAccountBalancesChart(uid),
-    renderGoalsProgressChart(uid),
     renderDebtsChart(uid),
     renderMonthlyTrendChart(uid),
     renderInvestmentsChart(uid),
