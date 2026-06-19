@@ -547,6 +547,9 @@ export async function setupInvestmentsSection(uid) {
 
     document.getElementById('edit-holding-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await updateDocById(uid, 'investments', id, { name: document.getElementById('eh-name').value.trim() });
         showToast('Acción actualizada', 'success');
@@ -554,7 +557,9 @@ export async function setupInvestmentsSection(uid) {
         dispatchDataChange();
         await renderInvestmentsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al actualizar', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   };
@@ -601,6 +606,9 @@ export async function setupInvestmentsSection(uid) {
 
     document.getElementById('edit-purchase-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await updateDocById(uid, 'investment_purchases', purchaseId, {
           date: document.getElementById('ep-date').value,
@@ -616,7 +624,9 @@ export async function setupInvestmentsSection(uid) {
         await renderPurchasesModal(uid, investmentId);
         await renderInvestmentsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al actualizar compra', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   };

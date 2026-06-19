@@ -162,6 +162,9 @@ export function setupDebtsSection(uid) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btn = form.querySelector('button[type="submit"]');
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Guardando...';
     try {
       await createDebt(uid, {
         name: document.getElementById('debt-name').value,
@@ -175,7 +178,9 @@ export function setupDebtsSection(uid) {
       dispatchDataChange();
       await renderDebtsList(uid);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Error al registrar deuda', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
     }
   });
 
@@ -223,6 +228,9 @@ export function setupDebtsSection(uid) {
 
     document.getElementById('edit-debt-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await updateDebt(uid, id, {
           name: document.getElementById('ed-name').value.trim(),
@@ -235,7 +243,9 @@ export function setupDebtsSection(uid) {
         dispatchDataChange();
         await renderDebtsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al actualizar deuda', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   };

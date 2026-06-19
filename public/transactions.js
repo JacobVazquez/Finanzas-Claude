@@ -346,6 +346,9 @@ export async function setupTransactionsSection(uid) {
   if (incomeForm) {
     incomeForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = incomeForm.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await addIncome(uid, {
           accountId: document.getElementById('income-account').value,
@@ -360,7 +363,9 @@ export async function setupTransactionsSection(uid) {
         dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al registrar ingreso', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   }
@@ -370,6 +375,9 @@ export async function setupTransactionsSection(uid) {
   if (expenseForm) {
     expenseForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = expenseForm.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await addExpense(uid, {
           accountId: document.getElementById('expense-account').value,
@@ -384,7 +392,9 @@ export async function setupTransactionsSection(uid) {
         dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al registrar egreso', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   }
@@ -394,6 +404,9 @@ export async function setupTransactionsSection(uid) {
   if (transferForm) {
     transferForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = transferForm.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await addTransfer(uid, {
           fromAccountId: document.getElementById('transfer-from').value,
@@ -408,7 +421,9 @@ export async function setupTransactionsSection(uid) {
         dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al registrar transferencia', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   }
@@ -418,6 +433,9 @@ export async function setupTransactionsSection(uid) {
   if (debtForm) {
     debtForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = debtForm.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await addDebtPayment(uid, {
           accountId: document.getElementById('debt-payment-account').value,
@@ -432,7 +450,9 @@ export async function setupTransactionsSection(uid) {
         dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al registrar pago', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   }
@@ -442,6 +462,9 @@ export async function setupTransactionsSection(uid) {
   if (goalForm) {
     goalForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = goalForm.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await addGoalContribution(uid, {
           accountId: document.getElementById('goal-contribution-account').value,
@@ -456,7 +479,9 @@ export async function setupTransactionsSection(uid) {
         dispatchDataChange();
         await renderTransactionsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al registrar aportacion', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   }

@@ -119,6 +119,9 @@ export function setupGoalsSection(uid) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btn = form.querySelector('button[type="submit"]');
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Guardando...';
     try {
       await createGoal(uid, {
         name: document.getElementById('goal-name').value,
@@ -131,7 +134,9 @@ export function setupGoalsSection(uid) {
       dispatchDataChange();
       await renderGoalsList(uid);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Error al crear meta', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
     }
   });
 
@@ -179,6 +184,9 @@ export function setupGoalsSection(uid) {
 
     document.getElementById('edit-goal-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await updateGoal(uid, id, {
           name: document.getElementById('eg-name').value.trim(),
@@ -191,7 +199,9 @@ export function setupGoalsSection(uid) {
         dispatchDataChange();
         await renderGoalsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al actualizar meta', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   };

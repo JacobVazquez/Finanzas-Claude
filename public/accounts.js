@@ -277,6 +277,9 @@ export function setupAccountsSection(uid) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btn = form.querySelector('button[type="submit"]');
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Guardando...';
     const name = document.getElementById('account-name').value;
     const type = document.getElementById('account-type').value;
     const initialBalance = document.getElementById('account-initial-balance').value;
@@ -290,7 +293,9 @@ export function setupAccountsSection(uid) {
       dispatchDataChange();
       await renderAccountsList(uid);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Error al crear cuenta', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
     }
   });
 
@@ -339,6 +344,9 @@ export function setupAccountsSection(uid) {
 
     document.getElementById('edit-account-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
       try {
         await updateAccount(uid, id, {
           name: document.getElementById('ea-name').value.trim(),
@@ -350,7 +358,9 @@ export function setupAccountsSection(uid) {
         dispatchDataChange();
         await renderAccountsList(uid);
       } catch (err) {
-        showToast(err.message, 'error');
+        showToast(err.message || 'Error al actualizar cuenta', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
       }
     });
   };
