@@ -12,6 +12,7 @@ import { renderGoalsList } from './goals.js';
 import { renderAccountCards } from './accounts.js';
 import { renderTransactionsList } from './transactions.js';
 import { showToast } from './utils.js';
+import { setupReportButton } from './report.js';
 
 // ============================================================
 // Navigation
@@ -123,6 +124,9 @@ async function initApp(user) {
       const active = sessionStorage.getItem('currentSection') || 'dashboard';
       if (active !== 'dashboard') navigateTo(active);
     });
+
+    // Setup report button
+    setupReportButton(user.uid);
 
     // Load dashboard
     await loadDashboard(user.uid, 'month');
