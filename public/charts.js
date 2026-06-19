@@ -380,6 +380,7 @@ export async function renderInvestmentsChart(uid) {
   const investments = await getInvestments(uid);
   if (!investments.length) {
     destroyChart('investments');
+    canvas.closest('.chart-container').innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:2rem">Sin inversiones registradas</p>';
     return;
   }
 
@@ -425,6 +426,7 @@ export async function renderYieldProjectionChart(uid) {
   const invAccounts = await getInvestmentAccountsYield(uid);
   if (!invAccounts.length) {
     destroyChart('yield-projection');
+    canvas.closest('.chart-container').innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:2rem">Sin cuentas de inversión con rendimiento configurado</p>';
     return;
   }
 
@@ -437,13 +439,12 @@ export async function renderYieldProjectionChart(uid) {
   }
 
   const datasets = invAccounts.map((a, idx) => {
+    // Balance actual = base + yield ya acumulado hasta hoy
+    const currentBalance = a.baseBalance + calcYieldCents(a.baseBalance, a.annualYield, a.createdAt);
     const data = labels.map((_, i) => {
-      const futureDate = new Date(today.getFullYear(), today.getMonth() + i, today.getDate());
-      const projected = a.baseBalance + calcYieldCents(a.baseBalance, a.annualYield, a.createdAt);
-      // Proyección hacia adelante desde hoy
       const daysAhead = i * 30.44;
       const futureFactor = Math.pow(1 + a.annualYield / 100, daysAhead / 365);
-      return fromCents(Math.round(projected * futureFactor));
+      return fromCents(Math.round(currentBalance * futureFactor));
     });
     return {
       label: a.name,
