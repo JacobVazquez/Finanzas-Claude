@@ -11,7 +11,8 @@ export const TRANSACTION_TYPES = {
   transfer_out: 'Transferencia salida',
   transfer_in: 'Transferencia entrada',
   debt_payment: 'Pago de deuda',
-  goal_contribution: 'Aportacion a meta'
+  goal_contribution: 'Aportacion a meta',
+  investment_buy: 'Compra de inversión'
 };
 
 /**

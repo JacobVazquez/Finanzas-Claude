@@ -3,6 +3,7 @@ import { getAccounts, calculateAccountBalance } from './accounts.js';
 import { getExpenseCategories } from './categories.js';
 import { getGoals } from './goals.js';
 import { getDebts } from './debts.js';
+import { getInvestments } from './investments.js';
 import { fromCents, dateToISO } from './utils.js';
 
 // Chart instances storage to destroy before recreating
@@ -368,6 +369,51 @@ export async function renderMonthlyTrendChart(uid) {
 }
 
 /**
+ * Gráfica de barras: Invertido vs Valor actual por holding
+ */
+export async function renderInvestmentsChart(uid) {
+  const canvas = document.getElementById('chart-investments');
+  if (!canvas) return;
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const investments = await getInvestments(uid);
+  if (!investments.length) {
+    destroyChart('investments');
+    return;
+  }
+
+  const labels = investments.map(i => i.ticker);
+  const invested = investments.map(i => fromCents(i.totalInvestedCents));
+  const current = investments.map(i => fromCents(i.currentValueCents));
+
+  destroyChart('investments');
+  chartInstances['investments'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Invertido', data: invested, backgroundColor: COLORS.info + 'CC', borderColor: COLORS.info, borderWidth: 1, borderRadius: 4 },
+        { label: 'Valor actual', data: current, backgroundColor: COLORS.success + 'CC', borderColor: COLORS.success, borderWidth: 1, borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+          }
+        }
+      },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
+    }
+  });
+}
+
+/**
  * Actualiza todas las graficas
  */
 export async function updateAllCharts(uid, startDate, endDate) {
@@ -378,6 +424,7 @@ export async function updateAllCharts(uid, startDate, endDate) {
     renderAccountBalancesChart(uid),
     renderGoalsProgressChart(uid),
     renderDebtsChart(uid),
-    renderMonthlyTrendChart(uid)
+    renderMonthlyTrendChart(uid),
+    renderInvestmentsChart(uid)
   ]);
 }

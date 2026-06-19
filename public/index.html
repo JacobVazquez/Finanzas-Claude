@@ -276,6 +276,12 @@
             <canvas id="chart-debts"></canvas>
           </div>
         </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Rendimiento de Inversiones</h3>
+          <div class="chart-container">
+            <canvas id="chart-investments"></canvas>
+          </div>
+        </div>
       </div>
 
       <!-- Recent Transactions -->
@@ -659,8 +665,13 @@
           <h3 class="card-title">Registrar compra</h3>
           <form id="investment-purchase-form" class="form-grid">
             <div class="form-group form-full">
-              <label>Acción</label>
+              <label>Acción / ETF</label>
               <select id="purchase-investment" required></select>
+            </div>
+            <div class="form-group form-full">
+              <label>Cuenta origen (opcional)</label>
+              <select id="purchase-account"></select>
+              <small class="form-hint">Si seleccionas una cuenta, el monto se descontará de su saldo.</small>
             </div>
             <div class="form-group">
               <label>Fecha de compra</label>

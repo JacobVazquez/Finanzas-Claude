@@ -3,9 +3,10 @@ import { formatMXN, toCents, fromCents, showToast, validateAmount, dispatchDataC
 
 export const ACCOUNT_TYPES = [
   { value: 'efectivo', label: 'Efectivo' },
-  { value: 'debito', label: 'Debito' },
+  { value: 'debito', label: 'Débito' },
   { value: 'bancaria', label: 'Bancaria' },
   { value: 'digital', label: 'Digital (OXXO Pay, Mercado Pago, etc.)' },
+  { value: 'inversion', label: 'Inversión (broker)' },
   { value: 'otro', label: 'Otro' }
 ];
 
@@ -73,6 +74,7 @@ export async function calculateAccountBalance(uid, accountId) {
       else if (t.type === 'transfer_in') balance += t.amount;
       else if (t.type === 'debt_payment') balance -= t.amount;
       else if (t.type === 'goal_contribution') balance -= t.amount;
+      else if (t.type === 'investment_buy') balance -= t.amount;
     }
     if (t.fromAccountId === accountId && t.type === 'transfer_out') {
       // already counted above via accountId

@@ -88,13 +88,14 @@ export async function addInvestmentHolding(uid, { ticker, name, currency }) {
   });
 }
 
-export async function addPurchase(uid, { investmentId, ticker, date, shares, pricePerShare, isFractional, fees, notes }) {
+export async function addPurchase(uid, { investmentId, ticker, date, shares, pricePerShare, isFractional, fees, notes, accountId }) {
   if (!validateDate(date)) throw new Error('Fecha inválida.');
   if (!shares || isNaN(shares) || Number(shares) <= 0) throw new Error('Cantidad de acciones inválida.');
   if (!validateAmount(pricePerShare)) throw new Error('Precio por acción inválido.');
 
   const pricePerShareCents = toCents(pricePerShare);
   const feesCents = fees ? toCents(fees) : 0;
+  const totalCents = Math.round(Number(shares) * pricePerShareCents) + feesCents;
 
   await createDoc(uid, 'investment_purchases', {
     investmentId,
@@ -104,8 +105,21 @@ export async function addPurchase(uid, { investmentId, ticker, date, shares, pri
     pricePerShareCents,
     isFractional: !!isFractional,
     feesCents,
-    notes: notes || ''
+    notes: notes || '',
+    accountId: accountId || null
   });
+
+  if (accountId) {
+    await createDoc(uid, 'transactions', {
+      type: 'investment_buy',
+      accountId,
+      investmentId,
+      ticker,
+      amount: totalCents,
+      date,
+      description: `Compra ${ticker} x${Number(shares)}`
+    });
+  }
 }
 
 export async function deleteInvestment(uid, investmentId) {
@@ -347,7 +361,18 @@ export async function setupInvestmentsSection(uid) {
       investments.map(i => `<option value="${i.id}" data-ticker="${i.ticker}">${i.ticker} — ${i.name}</option>`).join('');
   }
 
+  // Poblar select de cuentas en el form de compra
+  async function refreshAccountSelect() {
+    const { getAccounts } = await import('./accounts.js');
+    const accounts = await getAccounts(uid);
+    const sel = document.getElementById('purchase-account');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Sin vincular cuenta --</option>' +
+      accounts.map(a => `<option value="${a.id}"${a.type === 'inversion' ? ' data-inv="1"' : ''}>${a.name}${a.type === 'inversion' ? ' 📈' : ''}</option>`).join('');
+  }
+
   await refreshHoldingSelect();
+  await refreshAccountSelect();
 
   // Form: agregar holding
   const holdingForm = document.getElementById('investment-holding-form');
@@ -410,7 +435,8 @@ export async function setupInvestmentsSection(uid) {
           pricePerShare: document.getElementById('purchase-price').value,
           isFractional: document.getElementById('purchase-fractional').checked,
           fees: document.getElementById('purchase-fees').value,
-          notes: document.getElementById('purchase-notes').value
+          notes: document.getElementById('purchase-notes').value,
+          accountId: document.getElementById('purchase-account')?.value || null
         });
         showToast('Compra registrada', 'success');
         purchaseForm.reset();
