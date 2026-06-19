@@ -178,51 +178,54 @@
       </div>
 
       <!-- KPI Cards -->
-      <div class="kpi-grid">
-        <div class="kpi-card kpi-income">
-          <div class="kpi-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      <div class="kpi-section">
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-income">
+            <div class="kpi-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            </div>
+            <div class="kpi-info">
+              <span class="kpi-label">Ingresos</span>
+              <span class="kpi-value" id="kpi-income">$0.00</span>
+            </div>
           </div>
-          <div class="kpi-info">
-            <span class="kpi-label">Ingresos</span>
-            <span class="kpi-value" id="kpi-income">$0.00</span>
+          <div class="kpi-card kpi-expenses">
+            <div class="kpi-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            </div>
+            <div class="kpi-info">
+              <span class="kpi-label">Egresos</span>
+              <span class="kpi-value" id="kpi-expenses">$0.00</span>
+            </div>
+          </div>
+          <div id="kpi-balance-card" class="kpi-card kpi-balance">
+            <div class="kpi-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><path d="M3 9l9-7 9 7"/><path d="M3 15h8l-8 6"/><path d="M21 15h-8l8 6"/></svg>
+            </div>
+            <div class="kpi-info">
+              <span class="kpi-label">Balance</span>
+              <span class="kpi-value" id="kpi-balance">$0.00</span>
+            </div>
+          </div>
+          <div class="kpi-card kpi-savings">
+            <div class="kpi-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="kpi-info">
+              <span class="kpi-label">Tasa de Ahorro</span>
+              <span class="kpi-value" id="kpi-savings-rate">0%</span>
+            </div>
           </div>
         </div>
-        <div class="kpi-card kpi-expenses">
-          <div class="kpi-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+
+        <!-- Saldo Total - card destacada -->
+        <div class="kpi-card-total">
+          <div class="kpi-total-header">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span class="kpi-total-label">Saldo Total</span>
           </div>
-          <div class="kpi-info">
-            <span class="kpi-label">Egresos</span>
-            <span class="kpi-value" id="kpi-expenses">$0.00</span>
-          </div>
-        </div>
-        <div id="kpi-balance-card" class="kpi-card kpi-balance">
-          <div class="kpi-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><path d="M3 9l9-7 9 7"/><path d="M3 15h8l-8 6"/><path d="M21 15h-8l8 6"/></svg>
-          </div>
-          <div class="kpi-info">
-            <span class="kpi-label">Balance</span>
-            <span class="kpi-value" id="kpi-balance">$0.00</span>
-          </div>
-        </div>
-        <div class="kpi-card kpi-savings">
-          <div class="kpi-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          </div>
-          <div class="kpi-info">
-            <span class="kpi-label">Tasa de Ahorro</span>
-            <span class="kpi-value" id="kpi-savings-rate">0%</span>
-          </div>
-        </div>
-        <div class="kpi-card kpi-worth">
-          <div class="kpi-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-          </div>
-          <div class="kpi-info">
-            <span class="kpi-label">Patrimonio Neto</span>
-            <span class="kpi-value" id="kpi-net-worth">$0.00</span>
-          </div>
+          <span class="kpi-total-value" id="kpi-net-worth">$0.00</span>
+          <span class="kpi-total-sub">Patrimonio acumulado</span>
         </div>
       </div>
 
