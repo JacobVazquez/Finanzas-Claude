@@ -63,6 +63,59 @@ const barTooltip = {
   }
 };
 
+// Formatea valor para datalabels (abreviado para no saturar)
+function dlFmt(v) {
+  if (v === 0 || v == null) return '';
+  const abs = Math.abs(v);
+  if (abs >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
+  if (abs >= 1000) return '$' + (v / 1000).toFixed(1) + 'k';
+  return '$' + v.toLocaleString('es-MX', { maximumFractionDigits: 0 });
+}
+
+// Config datalabels para barras verticales
+const dlBar = {
+  anchor: 'end',
+  align: 'end',
+  offset: 2,
+  font: { size: 10, weight: '600' },
+  color: '#374151',
+  formatter: dlFmt,
+  clip: false,
+};
+
+// Config datalabels para barras apiladas (mostrar solo en segmento "top")
+const dlBarStacked = {
+  anchor: 'center',
+  align: 'center',
+  font: { size: 10, weight: '600' },
+  color: '#fff',
+  formatter: (v) => v > 0 ? dlFmt(v) : '',
+};
+
+// Config datalabels para barras horizontales
+const dlBarH = {
+  anchor: 'end',
+  align: 'right',
+  offset: 4,
+  font: { size: 10, weight: '600' },
+  color: '#374151',
+  formatter: dlFmt,
+  clip: false,
+};
+
+// Config datalabels para líneas (solo puntos extremos)
+function dlLine(totalPoints) {
+  return {
+    anchor: 'top',
+    align: 'top',
+    offset: 4,
+    font: { size: 9, weight: '600' },
+    color: '#374151',
+    formatter: dlFmt,
+    display: (ctx) => ctx.dataIndex === 0 || ctx.dataIndex === totalPoints - 1,
+  };
+}
+
 /**
  * Gráfica de barras: Ingresos por mes
  */
@@ -85,7 +138,7 @@ export async function renderIncomeChart(uid, startDate, endDate) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: barTooltip },
+      plugins: { legend: { display: false }, tooltip: barTooltip, datalabels: dlBar },
       scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
     }
   });
@@ -113,7 +166,7 @@ export async function renderExpenseChart(uid, startDate, endDate) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: barTooltip },
+      plugins: { legend: { display: false }, tooltip: barTooltip, datalabels: dlBar },
       scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
     }
   });
@@ -166,7 +219,8 @@ export async function renderExpenseByCategoryChart(uid, startDate, endDate) {
           callbacks: {
             label: ctx => `${ctx.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
           }
-        }
+        },
+        datalabels: { display: false }
       }
     }
   });
@@ -211,7 +265,8 @@ export async function renderAccountBalancesChart(uid) {
           callbacks: {
             label: ctx => `Saldo: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
           }
-        }
+        },
+        datalabels: dlBarH
       },
       scales: {
         x: { ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
@@ -248,7 +303,7 @@ export async function renderGoalsProgressChart(uid) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
+      plugins: { legend: { position: 'top' }, datalabels: dlBarStacked },
       scales: {
         y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
       }
@@ -285,7 +340,7 @@ export async function renderDebtsChart(uid) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
+      plugins: { legend: { position: 'top' }, datalabels: dlBarStacked },
       scales: {
         y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
       }
@@ -360,7 +415,7 @@ export async function renderMonthlyTrendChart(uid) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
+      plugins: { legend: { position: 'top' }, datalabels: dlLine(months.length) },
       scales: {
         y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
       }
@@ -407,7 +462,8 @@ export async function renderInvestmentsChart(uid) {
           callbacks: {
             label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
           }
-        }
+        },
+        datalabels: dlBar
       },
       scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
     }
@@ -488,7 +544,8 @@ export async function renderYieldProjectionChart(uid) {
           callbacks: {
             label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
           }
-        }
+        },
+        datalabels: dlLine(labels.length)
       },
       scales: {
         y: { beginAtZero: false, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
