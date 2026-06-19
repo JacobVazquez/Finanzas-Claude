@@ -1,7 +1,7 @@
 import { calculateKPIs } from './dashboard.js';
 import { getTransactions } from './transactions.js';
 import { getAccounts } from './accounts.js';
-import { formatMXN, fromCents } from './utils.js';
+import { formatMXN } from './utils.js';
 
 const COLORS = {
   primary: '#1E3A8A',
@@ -27,16 +27,26 @@ const TX_LABELS = {
   investment_buy: 'Compra de inversión',
 };
 
+const CHART_META = [
+  { id: 'chart-income',            title: 'Ingresos por Mes' },
+  { id: 'chart-expense',           title: 'Egresos por Mes' },
+  { id: 'chart-expense-category',  title: 'Egresos por Categoría' },
+  { id: 'chart-account-balances',  title: 'Saldos por Cuenta' },
+  { id: 'chart-monthly-trend',     title: 'Tendencia Mensual' },
+  { id: 'chart-debts',             title: 'Estado de Deudas' },
+  { id: 'chart-investments',       title: 'Rendimiento de Inversiones' },
+  { id: 'chart-yield-projection',  title: 'Proyección de Rendimientos — 12 meses' },
+];
+
 function formatDate(iso) {
   if (!iso) return '—';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+  const [, m, d] = iso.split('-');
+  return `${d}/${m}/${iso.split('-')[0]}`;
 }
 
 function formatDateLong(iso) {
   if (!iso) return '';
-  const date = new Date(iso + 'T12:00:00');
-  return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(iso + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function txTypeColor(type) {
@@ -51,13 +61,61 @@ function txSign(type) {
   return (type === 'income' || type === 'transfer_in') ? '+' : '-';
 }
 
-function buildHTML({ startDate, endDate, kpis, transactions, accountMap }) {
+/**
+ * Captura los canvas de Chart.js del DOM como imágenes base64.
+ * Solo incluye los que tienen datos (width > 0 y no están vacíos).
+ */
+function captureCharts() {
+  return CHART_META.map(({ id, title }) => {
+    const canvas = document.getElementById(id);
+    if (!canvas || canvas.width === 0 || canvas.height === 0) return null;
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      // Un canvas vacío produce una imagen de un color sólido muy pequeña — la excluimos
+      if (dataUrl === 'data:,') return null;
+      return { title, dataUrl };
+    } catch {
+      return null;
+    }
+  }).filter(Boolean);
+}
+
+function buildChartsHTML(charts) {
+  if (!charts.length) return '';
+
+  // Separar proyección (ancho completo) del resto (grid 2 columnas)
+  const projection = charts.find(c => c.title.includes('Proyección'));
+  const grid = charts.filter(c => !c.title.includes('Proyección'));
+
+  const gridHTML = grid.length ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      ${grid.map(c => `
+        <div style="background:${COLORS.bg};border-radius:8px;padding:14px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;
+                      color:${COLORS.muted};margin-bottom:10px">${c.title}</div>
+          <img src="${c.dataUrl}" style="width:100%;height:auto;border-radius:4px" />
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  const projHTML = projection ? `
+    <div style="background:${COLORS.bg};border-radius:8px;padding:14px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;
+                  color:${COLORS.muted};margin-bottom:10px">${projection.title}</div>
+      <img src="${projection.dataUrl}" style="width:100%;height:auto;border-radius:4px" />
+    </div>
+  ` : '';
+
+  return gridHTML + projHTML;
+}
+
+function buildHTML({ startDate, endDate, kpis, transactions, accountMap, charts }) {
   const rows = transactions.map(t => `
     <tr>
       <td>${formatDate(t.date)}</td>
       <td>
-        <span style="
-          display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;
+        <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;
           background:${txTypeColor(t.type)}22;color:${txTypeColor(t.type)}">
           ${TX_LABELS[t.type] || t.type}
         </span>
@@ -70,90 +128,66 @@ function buildHTML({ startDate, endDate, kpis, transactions, accountMap }) {
     </tr>
   `).join('');
 
+  const chartsSection = charts.length ? `
+    <div class="section-title">Gráficas</div>
+    ${buildChartsHTML(charts)}
+  ` : '';
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <title>Reporte Finanzas Pro</title>
   <style>
-    @page { size: letter portrait; margin: 18mm 16mm 18mm 16mm; }
+    @page { size: letter portrait; margin: 14mm 14mm 14mm 14mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: ${COLORS.text}; background: #fff; }
 
-    /* Header */
     .report-header {
       background: linear-gradient(135deg, ${COLORS.secondary} 0%, ${COLORS.primary} 100%);
-      color: #fff;
-      padding: 20px 24px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      color: #fff; padding: 18px 22px; border-radius: 10px; margin-bottom: 18px;
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .report-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .report-header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
     .report-header .gold { color: ${COLORS.gold}; }
-    .report-header .period { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+    .report-header .period { font-size: 11px; opacity: 0.8; margin-top: 4px; }
     .report-header .generated { font-size: 11px; opacity: 0.6; text-align: right; }
 
-    /* KPI grid */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .kpi-card {
-      background: ${COLORS.bg};
-      border-radius: 8px;
-      padding: 14px 16px;
-      border-left: 3px solid ${COLORS.primary};
-    }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+    .kpi-card { background: ${COLORS.bg}; border-radius: 8px; padding: 12px 14px; border-left: 3px solid ${COLORS.primary}; }
     .kpi-card.income { border-color: ${COLORS.success}; }
     .kpi-card.expense { border-color: ${COLORS.danger}; }
     .kpi-card.yield  { border-color: ${COLORS.warning}; }
     .kpi-card.total  {
       background: linear-gradient(135deg, ${COLORS.secondary} 0%, ${COLORS.primary} 100%);
       border: none; color: #fff; grid-column: span 4;
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 16px 20px;
+      display: flex; justify-content: space-between; align-items: center; padding: 14px 18px;
     }
-    .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: ${COLORS.muted}; margin-bottom: 6px; }
+    .kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: ${COLORS.muted}; margin-bottom: 5px; }
     .kpi-card.total .kpi-label { color: rgba(255,255,255,0.7); margin: 0; }
-    .kpi-value { font-size: 18px; font-weight: 700; }
-    .kpi-card.total .kpi-value { font-size: 24px; color: ${COLORS.gold}; }
+    .kpi-value { font-size: 16px; font-weight: 700; }
+    .kpi-card.total .kpi-value { font-size: 22px; color: ${COLORS.gold}; }
 
-    /* Section title */
     .section-title {
-      font-size: 13px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.5px; color: ${COLORS.primary};
-      border-bottom: 2px solid ${COLORS.primary};
-      padding-bottom: 6px; margin-bottom: 12px; margin-top: 24px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: ${COLORS.primary}; border-bottom: 2px solid ${COLORS.primary};
+      padding-bottom: 5px; margin-bottom: 12px; margin-top: 20px;
     }
 
-    /* Transactions table */
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
     thead tr { background: ${COLORS.secondary}; color: #fff; }
-    thead th { padding: 8px 10px; text-align: left; font-weight: 600; font-size: 11px; }
+    thead th { padding: 7px 9px; text-align: left; font-weight: 600; font-size: 10.5px; }
     thead th:last-child { text-align: right; }
     tbody tr { border-bottom: 1px solid ${COLORS.border}; }
     tbody tr:last-child { border-bottom: none; }
-    tbody td { padding: 7px 10px; vertical-align: middle; }
+    tbody td { padding: 6px 9px; vertical-align: middle; }
     tbody tr:nth-child(even) { background: ${COLORS.bg}; }
 
-    /* Footer */
     .report-footer {
-      margin-top: 28px;
-      padding-top: 12px;
-      border-top: 1px solid ${COLORS.border};
-      font-size: 10px;
-      color: ${COLORS.muted};
-      display: flex;
-      justify-content: space-between;
+      margin-top: 24px; padding-top: 10px; border-top: 1px solid ${COLORS.border};
+      font-size: 9.5px; color: ${COLORS.muted}; display: flex; justify-content: space-between;
     }
-
-    /* Empty state */
-    .empty { text-align:center; padding:24px; color:${COLORS.muted}; font-style:italic; }
+    .empty { text-align:center; padding:20px; color:${COLORS.muted}; font-style:italic; }
 
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -163,8 +197,7 @@ function buildHTML({ startDate, endDate, kpis, transactions, accountMap }) {
 </head>
 <body>
 
-  <!-- Print button (hidden on print) -->
-  <div class="no-print" style="margin-bottom:16px;display:flex;gap:10px;justify-content:flex-end">
+  <div class="no-print" style="margin-bottom:14px;display:flex;gap:10px;justify-content:flex-end">
     <button onclick="window.print()" style="
       background:${COLORS.primary};color:#fff;border:none;padding:9px 20px;
       border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">
@@ -177,7 +210,6 @@ function buildHTML({ startDate, endDate, kpis, transactions, accountMap }) {
     </button>
   </div>
 
-  <!-- Header -->
   <div class="report-header">
     <div>
       <h1>Finanzas <span class="gold">Pro</span></h1>
@@ -189,7 +221,6 @@ function buildHTML({ startDate, endDate, kpis, transactions, accountMap }) {
     </div>
   </div>
 
-  <!-- KPI Cards -->
   <div class="kpi-grid">
     <div class="kpi-card income">
       <div class="kpi-label">Ingresos</div>
@@ -215,17 +246,15 @@ function buildHTML({ startDate, endDate, kpis, transactions, accountMap }) {
     </div>
   </div>
 
-  <!-- Transactions -->
+  ${chartsSection}
+
   <div class="section-title">Movimientos del periodo</div>
   ${transactions.length === 0
     ? '<div class="empty">Sin movimientos en el periodo seleccionado.</div>'
     : `<table>
         <thead>
           <tr>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Descripción</th>
-            <th>Cuenta</th>
+            <th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Cuenta</th>
             <th style="text-align:right">Monto</th>
           </tr>
         </thead>
@@ -233,7 +262,6 @@ function buildHTML({ startDate, endDate, kpis, transactions, accountMap }) {
       </table>`
   }
 
-  <!-- Footer -->
   <div class="report-footer">
     <span>Finanzas Pro — Reporte generado automáticamente</span>
     <span>Periodo: ${formatDate(startDate)} – ${formatDate(endDate)}</span>
@@ -243,18 +271,13 @@ function buildHTML({ startDate, endDate, kpis, transactions, accountMap }) {
 </html>`;
 }
 
-/**
- * Abre el modal de configuración del reporte
- */
 export function setupReportButton(uid) {
   const btn = document.getElementById('btn-generate-pdf');
   if (!btn) return;
-
   btn.addEventListener('click', () => openReportModal(uid));
 }
 
 function openReportModal(uid) {
-  // Remove any existing modal
   document.getElementById('report-modal')?.remove();
 
   const today = new Date().toISOString().split('T')[0];
@@ -271,27 +294,26 @@ function openReportModal(uid) {
       background:#fff;border-radius:14px;padding:28px 32px;width:100%;max-width:420px;
       box-shadow:0 20px 60px rgba(0,0,0,0.3)
     ">
-      <h3 style="font-size:17px;font-weight:700;color:${COLORS.secondary};margin-bottom:20px">
+      <h3 style="font-size:17px;font-weight:700;color:${COLORS.secondary};margin-bottom:6px">
         Generar Reporte PDF
       </h3>
+      <p style="font-size:12px;color:${COLORS.muted};margin-bottom:20px">
+        Incluye KPIs, gráficas y tabla de movimientos.
+      </p>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div>
-          <label style="font-size:12px;font-weight:600;color:${COLORS.muted};text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">
-            Fecha inicio
-          </label>
+          <label style="font-size:12px;font-weight:600;color:${COLORS.muted};text-transform:uppercase;
+                        letter-spacing:0.4px;display:block;margin-bottom:6px">Fecha inicio</label>
           <input type="date" id="report-start" value="${firstOfMonth}" style="
             width:100%;padding:9px 12px;border:1.5px solid ${COLORS.border};
-            border-radius:8px;font-size:14px;color:${COLORS.text};outline:none
-          "/>
+            border-radius:8px;font-size:14px;color:${COLORS.text};outline:none"/>
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:${COLORS.muted};text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">
-            Fecha fin
-          </label>
+          <label style="font-size:12px;font-weight:600;color:${COLORS.muted};text-transform:uppercase;
+                        letter-spacing:0.4px;display:block;margin-bottom:6px">Fecha fin</label>
           <input type="date" id="report-end" value="${today}" style="
             width:100%;padding:9px 12px;border:1.5px solid ${COLORS.border};
-            border-radius:8px;font-size:14px;color:${COLORS.text};outline:none
-          "/>
+            border-radius:8px;font-size:14px;color:${COLORS.text};outline:none"/>
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:24px">
@@ -308,7 +330,6 @@ function openReportModal(uid) {
   `;
 
   document.body.appendChild(modal);
-
   document.getElementById('report-cancel').addEventListener('click', () => modal.remove());
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
@@ -316,20 +337,17 @@ function openReportModal(uid) {
     const startDate = document.getElementById('report-start').value;
     const endDate = document.getElementById('report-end').value;
 
-    if (!startDate || !endDate) {
-      alert('Selecciona las fechas de inicio y fin.');
-      return;
-    }
-    if (startDate > endDate) {
-      alert('La fecha de inicio debe ser anterior a la fecha fin.');
-      return;
-    }
+    if (!startDate || !endDate) { alert('Selecciona las fechas de inicio y fin.'); return; }
+    if (startDate > endDate) { alert('La fecha de inicio debe ser anterior a la fecha fin.'); return; }
 
     const genBtn = document.getElementById('report-generate');
     genBtn.disabled = true;
     genBtn.textContent = 'Generando...';
 
     try {
+      // Capturar gráficas ANTES de abrir la ventana (deben estar en el DOM actual)
+      const charts = captureCharts();
+
       const [kpis, transactions, accounts] = await Promise.all([
         calculateKPIs(uid, startDate, endDate),
         getTransactions(uid, { startDate, endDate }),
@@ -337,9 +355,9 @@ function openReportModal(uid) {
       ]);
 
       const accountMap = Object.fromEntries(accounts.map(a => [a.id, a.name]));
-      const html = buildHTML({ startDate, endDate, kpis, transactions, accountMap });
+      const html = buildHTML({ startDate, endDate, kpis, transactions, accountMap, charts });
 
-      const win = window.open('', '_blank', 'width=900,height=700');
+      const win = window.open('', '_blank', 'width=960,height=750');
       win.document.write(html);
       win.document.close();
 
