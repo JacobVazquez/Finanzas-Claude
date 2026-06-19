@@ -2,8 +2,8 @@ import { createDoc, readDocs, deleteDocById, updateDocById } from './firestore.j
 import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 import { getAccounts } from './accounts.js';
 import { getExpenseCategories, getIncomeTypes, populateCategorySelects } from './categories.js';
-import { getDebts } from './debts.js';
-import { getGoals } from './goals.js';
+import { getDebts, registerDebtPayment } from './debts.js';
+import { getGoals, addGoalContribution as updateGoalAccumulated } from './goals.js';
 
 export const TRANSACTION_TYPES = {
   income: 'Ingreso',
@@ -99,21 +99,15 @@ export async function addDebtPayment(uid, { accountId, debtId, amount, date, des
 
   const cents = toCents(amount);
 
-  await Promise.all([
-    createDoc(uid, 'transactions', {
-      type: 'debt_payment',
-      accountId,
-      debtId,
-      amount: cents,
-      date,
-      description: description || ''
-    }),
-    // Update debt pending amount
-    (async () => {
-      const { registerDebtPayment } = await import('./debts.js');
-      await registerDebtPayment(uid, debtId, cents);
-    })()
-  ]);
+  await registerDebtPayment(uid, debtId, cents);
+  await createDoc(uid, 'transactions', {
+    type: 'debt_payment',
+    accountId,
+    debtId,
+    amount: cents,
+    date,
+    description: description || ''
+  });
 }
 
 /**
@@ -127,20 +121,15 @@ export async function addGoalContribution(uid, { accountId, goalId, amount, date
 
   const cents = toCents(amount);
 
-  await Promise.all([
-    createDoc(uid, 'transactions', {
-      type: 'goal_contribution',
-      accountId,
-      goalId,
-      amount: cents,
-      date,
-      description: description || ''
-    }),
-    (async () => {
-      const { addGoalContribution: updateGoal } = await import('./goals.js');
-      await updateGoal(uid, goalId, cents);
-    })()
-  ]);
+  await updateGoalAccumulated(uid, goalId, cents);
+  await createDoc(uid, 'transactions', {
+    type: 'goal_contribution',
+    accountId,
+    goalId,
+    amount: cents,
+    date,
+    description: description || ''
+  });
 }
 
 /**

@@ -1,4 +1,4 @@
-import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
+import { createDoc, readDocs, updateDocById, deleteDocById, getDocById } from './firestore.js';
 import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 
 /**
@@ -58,8 +58,7 @@ export async function deleteDebt(uid, id) {
  * Registra un pago parcial o total de una deuda (en centavos)
  */
 export async function registerDebtPayment(uid, debtId, amountCents) {
-  const debts = await readDocs(uid, 'debts');
-  const debt = debts.find(d => d.id === debtId);
+  const debt = await getDocById(uid, 'debts', debtId);
   if (!debt) throw new Error('Deuda no encontrada.');
 
   const newPending = Math.max(0, (debt.pendingAmount || 0) - amountCents);

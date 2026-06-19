@@ -1,4 +1,4 @@
-import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
+import { createDoc, readDocs, updateDocById, deleteDocById, getDocById } from './firestore.js';
 import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 
 /**
@@ -52,8 +52,7 @@ export async function deleteGoal(uid, id) {
  * Suma al acumulado de una meta (en centavos)
  */
 export async function addGoalContribution(uid, goalId, amountCents) {
-  const goals = await readDocs(uid, 'goals');
-  const goal = goals.find(g => g.id === goalId);
+  const goal = await getDocById(uid, 'goals', goalId);
   if (!goal) throw new Error('Meta no encontrada.');
 
   const newAccumulated = (goal.accumulated || 0) + amountCents;
