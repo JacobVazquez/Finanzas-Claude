@@ -1,5 +1,5 @@
 import { getTransactions } from './transactions.js';
-import { getAccounts, calculateAccountBalance } from './accounts.js';
+import { getAccounts, calculateAccountBalance, getInvestmentAccountsYield, calcYieldCents } from './accounts.js';
 import { getExpenseCategories } from './categories.js';
 import { getGoals } from './goals.js';
 import { getDebts } from './debts.js';
@@ -414,6 +414,89 @@ export async function renderInvestmentsChart(uid) {
 }
 
 /**
+ * Gráfica de líneas: proyección de rendimientos a 12 meses por cuenta de inversión
+ */
+export async function renderYieldProjectionChart(uid) {
+  const canvas = document.getElementById('chart-yield-projection');
+  if (!canvas) return;
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const invAccounts = await getInvestmentAccountsYield(uid);
+  if (!invAccounts.length) {
+    destroyChart('yield-projection');
+    return;
+  }
+
+  // Generar etiquetas de los próximos 12 meses
+  const today = new Date();
+  const labels = [];
+  for (let i = 0; i <= 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    labels.push(d.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' }));
+  }
+
+  const datasets = invAccounts.map((a, idx) => {
+    const data = labels.map((_, i) => {
+      const futureDate = new Date(today.getFullYear(), today.getMonth() + i, today.getDate());
+      const projected = a.baseBalance + calcYieldCents(a.baseBalance, a.annualYield, a.createdAt);
+      // Proyección hacia adelante desde hoy
+      const daysAhead = i * 30.44;
+      const futureFactor = Math.pow(1 + a.annualYield / 100, daysAhead / 365);
+      return fromCents(Math.round(projected * futureFactor));
+    });
+    return {
+      label: a.name,
+      data,
+      borderColor: COLORS.palette[idx % COLORS.palette.length],
+      backgroundColor: COLORS.palette[idx % COLORS.palette.length] + '18',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 3
+    };
+  });
+
+  // Línea de total combinado si hay más de una cuenta
+  if (invAccounts.length > 1) {
+    const totalData = labels.map((_, i) => {
+      return datasets.reduce((sum, ds) => sum + ds.data[i], 0);
+    });
+    datasets.push({
+      label: 'Total',
+      data: totalData,
+      borderColor: COLORS.warning,
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderDash: [6, 3],
+      fill: false,
+      tension: 0.4,
+      pointRadius: 0
+    });
+  }
+
+  destroyChart('yield-projection');
+  chartInstances['yield-projection'] = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: false, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
+      }
+    }
+  });
+}
+
+/**
  * Actualiza todas las graficas
  */
 export async function updateAllCharts(uid, startDate, endDate) {
@@ -425,6 +508,7 @@ export async function updateAllCharts(uid, startDate, endDate) {
     renderGoalsProgressChart(uid),
     renderDebtsChart(uid),
     renderMonthlyTrendChart(uid),
-    renderInvestmentsChart(uid)
+    renderInvestmentsChart(uid),
+    renderYieldProjectionChart(uid)
   ]);
 }

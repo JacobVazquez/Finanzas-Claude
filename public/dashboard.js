@@ -1,7 +1,7 @@
 import { readDocs } from './firestore.js';
 import { formatMXN, firstDayOfMonth, lastDayOfMonth, todayISO, dateToISO, showToast, dispatchDataChange } from './utils.js';
 import { getTransactions, renderTransactionsList, addIncome, addExpense } from './transactions.js';
-import { getAccounts, calculateAccountBalance, renderAccountCards } from './accounts.js';
+import { getAccounts, calculateAccountBalance, renderAccountCards, getTotalYieldCents } from './accounts.js';
 import { getExpenseCategories, getIncomeTypes } from './categories.js';
 
 // Estado del filtro activo en el dashboard
@@ -36,17 +36,20 @@ export async function calculateKPIs(uid, startDate, endDate) {
   const savingsRate = totalIncome > 0 ? Math.round((balance / totalIncome) * 100) : 0;
 
   // Net worth: sum of all account balances
-  const balances = await Promise.all(accounts.map(a => calculateAccountBalance(uid, a.id)));
+  const [balances, totalYield] = await Promise.all([
+    Promise.all(accounts.map(a => calculateAccountBalance(uid, a.id))),
+    getTotalYieldCents(uid)
+  ]);
   const netWorth = balances.reduce((sum, b) => sum + b, 0);
 
-  return { totalIncome, totalExpenses, balance, savingsRate, netWorth };
+  return { totalIncome, totalExpenses, balance, savingsRate, netWorth, totalYield };
 }
 
 /**
  * Renderiza las tarjetas KPI
  */
 export function renderKPICards(data) {
-  const { totalIncome, totalExpenses, balance, savingsRate, netWorth } = data;
+  const { totalIncome, totalExpenses, balance, savingsRate, netWorth, totalYield } = data;
 
   const setEl = (id, html) => {
     const el = document.getElementById(id);
@@ -55,6 +58,7 @@ export function renderKPICards(data) {
 
   setEl('kpi-income', formatMXN(totalIncome));
   setEl('kpi-expenses', formatMXN(totalExpenses));
+  setEl('kpi-total-yield', formatMXN(totalYield || 0));
   setEl('kpi-balance', formatMXN(balance));
   setEl('kpi-savings-rate', `${savingsRate}%`);
   setEl('kpi-net-worth', formatMXN(netWorth));

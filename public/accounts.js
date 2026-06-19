@@ -16,12 +16,57 @@ export const ACCOUNT_TYPES = [
  * balanceCents: saldo base en centavos
  * createdAt: Firestore Timestamp o Date
  */
-function calcYieldCents(balanceCents, rate, createdAt) {
+export function calcYieldCents(balanceCents, rate, createdAt) {
   if (!rate || rate <= 0 || !balanceCents) return 0;
   const start = createdAt?.toDate ? createdAt.toDate() : (createdAt instanceof Date ? createdAt : new Date());
   const days = Math.max(0, (Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
   const factor = Math.pow(1 + rate / 100, days / 365) - 1;
   return Math.round(balanceCents * factor);
+}
+
+/**
+ * Retorna el total de rendimientos acumulados en todas las cuentas de inversión
+ */
+export async function getTotalYieldCents(uid) {
+  const [accounts, transactions] = await Promise.all([
+    readDocs(uid, 'accounts'),
+    readDocs(uid, 'transactions')
+  ]);
+  let total = 0;
+  for (const a of accounts) {
+    if (a.type !== 'inversion' || !a.annualYield) continue;
+    let base = a.initialBalance || 0;
+    for (const t of transactions) {
+      if (t.accountId !== a.id) continue;
+      if (t.type === 'income') base += t.amount;
+      else if (['expense','transfer_out','debt_payment','goal_contribution','investment_buy'].includes(t.type)) base -= t.amount;
+      else if (t.type === 'transfer_in') base += t.amount;
+    }
+    total += calcYieldCents(base, a.annualYield, a.createdAt);
+  }
+  return total;
+}
+
+/**
+ * Retorna cuentas de inversión con sus datos de rendimiento para gráficas
+ */
+export async function getInvestmentAccountsYield(uid) {
+  const [accounts, transactions] = await Promise.all([
+    readDocs(uid, 'accounts'),
+    readDocs(uid, 'transactions')
+  ]);
+  return accounts
+    .filter(a => a.type === 'inversion' && a.annualYield > 0)
+    .map(a => {
+      let base = a.initialBalance || 0;
+      for (const t of transactions) {
+        if (t.accountId !== a.id) continue;
+        if (t.type === 'income') base += t.amount;
+        else if (['expense','transfer_out','debt_payment','goal_contribution','investment_buy'].includes(t.type)) base -= t.amount;
+        else if (t.type === 'transfer_in') base += t.amount;
+      }
+      return { ...a, baseBalance: base };
+    });
 }
 
 /**

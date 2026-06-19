@@ -198,6 +198,15 @@
               <span class="kpi-value" id="kpi-expenses">$0.00</span>
             </div>
           </div>
+          <div class="kpi-card kpi-yield" style="grid-column: 1 / -1">
+            <div class="kpi-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            </div>
+            <div class="kpi-info">
+              <span class="kpi-label">Rendimientos acumulados</span>
+              <span class="kpi-value" id="kpi-total-yield">$0.00</span>
+            </div>
+          </div>
         </div>
 
         <!-- Saldo Total - card destacada -->
@@ -266,6 +275,14 @@
           <div class="chart-container">
             <canvas id="chart-investments"></canvas>
           </div>
+        </div>
+      </div>
+
+      <!-- Yield Projection - full width -->
+      <div class="card mt-4">
+        <h3 class="card-title">Proyección de rendimientos — próximos 12 meses</h3>
+        <div class="chart-container" style="height:260px">
+          <canvas id="chart-yield-projection"></canvas>
         </div>
       </div>
 
