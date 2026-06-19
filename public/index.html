@@ -298,6 +298,11 @@
               <label>Saldo inicial (MXN)</label>
               <input type="number" id="account-initial-balance" placeholder="0.00" min="0" step="0.01" value="0" />
             </div>
+            <div class="form-group" id="account-yield-group" style="display:none">
+              <label>Rendimiento anual (%)</label>
+              <input type="number" id="account-annual-yield" placeholder="ej. 8.5" min="0" max="100" step="0.01" />
+              <small class="form-hint">El saldo acumulará este rendimiento compuesto diariamente de forma automática.</small>
+            </div>
             <button type="submit" class="btn btn-primary">Crear Cuenta</button>
           </form>
         </div>
