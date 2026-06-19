@@ -127,6 +127,33 @@ export async function renderDebtsList(uid) {
 }
 
 /**
+ * Recalcula pendingAmount de todas las deudas basándose en las transacciones
+ * de tipo debt_payment registradas en Firestore. Repara datos históricos.
+ */
+export async function recalculateDebtBalances(uid) {
+  const [debts, transactions] = await Promise.all([
+    readDocs(uid, 'debts'),
+    readDocs(uid, 'transactions')
+  ]);
+
+  const payments = transactions.filter(t => t.type === 'debt_payment' && t.debtId);
+
+  const paymentsByDebt = {};
+  for (const p of payments) {
+    paymentsByDebt[p.debtId] = (paymentsByDebt[p.debtId] || 0) + (p.amount || 0);
+  }
+
+  const updates = debts.map(async (debt) => {
+    const totalPaid = paymentsByDebt[debt.id] || 0;
+    const newPending = Math.max(0, (debt.initialAmount || 0) - totalPaid);
+    const status = newPending <= 0 ? 'paid' : 'active';
+    await updateDocById(uid, 'debts', debt.id, { pendingAmount: newPending, status });
+  });
+
+  await Promise.all(updates);
+}
+
+/**
  * Inicializa la seccion de deudas
  */
 export function setupDebtsSection(uid) {
@@ -212,6 +239,25 @@ export function setupDebtsSection(uid) {
       }
     });
   };
+
+  const recalcBtn = document.getElementById('btn-recalculate-debts');
+  if (recalcBtn) {
+    recalcBtn.addEventListener('click', async () => {
+      recalcBtn.disabled = true;
+      recalcBtn.textContent = 'Recalculando...';
+      try {
+        await recalculateDebtBalances(uid);
+        showToast('Saldos de deudas recalculados correctamente', 'success');
+        dispatchDataChange();
+        await renderDebtsList(uid);
+      } catch (err) {
+        showToast('Error al recalcular: ' + err.message, 'error');
+      } finally {
+        recalcBtn.disabled = false;
+        recalcBtn.textContent = 'Recalcular saldos';
+      }
+    });
+  }
 
   renderDebtsList(uid);
 }
