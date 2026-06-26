@@ -5,7 +5,9 @@ import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, v
 
 export async function fetchCurrentPrice(ticker) {
   try {
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+    // Yahoo Finance bloquea CORS desde el browser — usamos proxy
+    const url = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
