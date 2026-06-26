@@ -1,5 +1,5 @@
-import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO } from './utils.js';
+import { createDoc, readDocs, updateDocById, deleteDocById, getDocById } from './firestore.js';
+import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 
 /**
  * Crea una nueva meta de ahorro
@@ -52,8 +52,7 @@ export async function deleteGoal(uid, id) {
  * Suma al acumulado de una meta (en centavos)
  */
 export async function addGoalContribution(uid, goalId, amountCents) {
-  const goals = await readDocs(uid, 'goals');
-  const goal = goals.find(g => g.id === goalId);
+  const goal = await getDocById(uid, 'goals', goalId);
   if (!goal) throw new Error('Meta no encontrada.');
 
   const newAccumulated = (goal.accumulated || 0) + amountCents;
@@ -102,6 +101,7 @@ export async function renderGoalsList(uid) {
           </div>
           ${g.targetDate ? `<p class="goal-date">Meta para: ${formatDate(g.targetDate)}</p>` : ''}
           <div class="goal-actions">
+            <button class="btn btn-sm btn-outline" onclick="window._editGoal('${g.id}', '${uid}')">Editar</button>
             <button class="btn btn-sm btn-danger" onclick="window._deleteGoal('${g.id}', '${uid}')">Eliminar</button>
           </div>
         </div>
@@ -119,6 +119,9 @@ export function setupGoalsSection(uid) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btn = form.querySelector('button[type="submit"]');
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Guardando...';
     try {
       await createGoal(uid, {
         name: document.getElementById('goal-name').value,
@@ -128,9 +131,12 @@ export function setupGoalsSection(uid) {
       });
       showToast('Meta creada correctamente', 'success');
       form.reset();
+      dispatchDataChange();
       await renderGoalsList(uid);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Error al crear meta', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
     }
   });
 
@@ -139,10 +145,65 @@ export function setupGoalsSection(uid) {
     try {
       await deleteGoal(uid, id);
       showToast('Meta eliminada', 'success');
+      dispatchDataChange();
       await renderGoalsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
     }
+  };
+
+  window._editGoal = async (id, uid) => {
+    const goals = await readDocs(uid, 'goals');
+    const g = goals.find(x => x.id === id);
+    if (!g) return;
+
+    openEditModal('Editar meta', `
+      <form id="edit-goal-form" class="form-grid" style="padding:1.25rem 1.5rem 1.5rem">
+        <div class="form-group form-full">
+          <label>Nombre</label>
+          <input type="text" id="eg-name" value="${g.name}" required />
+        </div>
+        <div class="form-group">
+          <label>Monto objetivo (MXN)</label>
+          <input type="number" id="eg-target" value="${fromCents(g.targetAmount)}" min="0.01" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label>Fecha objetivo</label>
+          <input type="date" id="eg-date" value="${g.targetDate || ''}" />
+        </div>
+        <div class="form-group form-full">
+          <label>Descripción</label>
+          <textarea id="eg-description" rows="2">${g.description || ''}</textarea>
+        </div>
+        <div class="form-group form-full modal-actions">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    `);
+
+    document.getElementById('edit-goal-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        await updateGoal(uid, id, {
+          name: document.getElementById('eg-name').value.trim(),
+          targetAmount: document.getElementById('eg-target').value,
+          targetDate: document.getElementById('eg-date').value || null,
+          description: document.getElementById('eg-description').value
+        });
+        showToast('Meta actualizada', 'success');
+        closeEditModal();
+        dispatchDataChange();
+        await renderGoalsList(uid);
+      } catch (err) {
+        showToast(err.message || 'Error al actualizar meta', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
+      }
+    });
   };
 
   renderGoalsList(uid);

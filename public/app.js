@@ -1,19 +1,26 @@
 import { onAuthChange, loginUser, registerUser, logoutUser } from './auth.js';
 import { initUserDoc } from './firestore.js';
-import { loadDashboard, setupDashboardFilters } from './dashboard.js';
+import { loadDashboard, setupDashboardFilters, setupDashboardQuickActions, getActiveFilter } from './dashboard.js';
 import { setupAccountsSection } from './accounts.js';
 import { setupTransactionsSection } from './transactions.js';
 import { setupCategoriesSection, initDefaultCategories, populateCategorySelects } from './categories.js';
 import { setupGoalsSection } from './goals.js';
-import { setupDebtsSection } from './debts.js';
+import { setupDebtsSection, renderDebtsList } from './debts.js';
 import { setupImportExport } from './import-export.js';
+import { setupInvestmentsSection } from './investments.js';
+import { renderGoalsList } from './goals.js';
+import { renderAccountCards } from './accounts.js';
+import { renderTransactionsList } from './transactions.js';
 import { showToast } from './utils.js';
+import { setupReportButton } from './report.js';
 
 // ============================================================
 // Navigation
 // ============================================================
 
-const sections = ['dashboard', 'accounts', 'transactions', 'categories', 'goals', 'debts', 'export'];
+const sections = ['dashboard', 'accounts', 'transactions', 'categories', 'goals', 'debts', 'investments', 'export'];
+
+let _currentUid = null;
 
 function navigateTo(sectionId) {
   sections.forEach(s => {
@@ -21,13 +28,31 @@ function navigateTo(sectionId) {
     if (el) el.classList.toggle('active', s === sectionId);
   });
 
-  // Update nav active state
   document.querySelectorAll('[data-nav]').forEach(el => {
     el.classList.toggle('active', el.dataset.nav === sectionId);
   });
 
-  // Store current section
   sessionStorage.setItem('currentSection', sectionId);
+
+  if (!_currentUid) return;
+
+  switch (sectionId) {
+    case 'dashboard':
+      if (window._dashboardReload) window._dashboardReload();
+      break;
+    case 'debts':
+      renderDebtsList(_currentUid);
+      break;
+    case 'goals':
+      renderGoalsList(_currentUid);
+      break;
+    case 'accounts':
+      renderAccountCards(_currentUid);
+      break;
+    case 'transactions':
+      renderTransactionsList(_currentUid);
+      break;
+  }
 }
 
 // ============================================================
@@ -70,6 +95,7 @@ async function initApp(user) {
   }
 
   showApp(user);
+  _currentUid = user.uid;
 
   try {
     await initUserDoc(user.uid);
@@ -77,16 +103,30 @@ async function initApp(user) {
 
     // Setup all sections
     setupDashboardFilters(user.uid);
+    await setupDashboardQuickActions(user.uid);
     setupAccountsSection(user.uid);
     await setupTransactionsSection(user.uid);
     setupGoalsSection(user.uid);
     setupDebtsSection(user.uid);
     await setupCategoriesSection(user.uid);
     setupImportExport(user.uid);
+    await setupInvestmentsSection(user.uid);
 
     // Navigate to stored section or dashboard
     const lastSection = sessionStorage.getItem('currentSection') || 'dashboard';
     navigateTo(lastSection);
+
+    // Expone recarga de dashboard para navegación
+    window._dashboardReload = () => loadDashboard(user.uid, getActiveFilter() ?? 'month', null, null);
+
+    // Auto-refresh de secciones no-dashboard cuando cambian datos
+    window.addEventListener('finanzas:changed', () => {
+      const active = sessionStorage.getItem('currentSection') || 'dashboard';
+      if (active !== 'dashboard') navigateTo(active);
+    });
+
+    // Setup report button
+    setupReportButton(user.uid);
 
     // Load dashboard
     await loadDashboard(user.uid, 'month');

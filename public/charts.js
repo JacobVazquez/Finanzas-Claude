@@ -1,8 +1,9 @@
 import { getTransactions } from './transactions.js';
-import { getAccounts, calculateAccountBalance } from './accounts.js';
+import { getAccounts, calculateAccountBalance, getInvestmentAccountsYield, calcYieldCents } from './accounts.js';
 import { getExpenseCategories } from './categories.js';
 import { getGoals } from './goals.js';
 import { getDebts } from './debts.js';
+import { getInvestments } from './investments.js';
 import { fromCents, dateToISO } from './utils.js';
 
 // Chart instances storage to destroy before recreating
@@ -34,18 +35,10 @@ const COLORS = {
 };
 
 /**
- * Renderiza grafica de barras: ingresos vs egresos por mes
+ * Agrupa transacciones por mes y retorna datos para graficas
  */
-export async function renderIncomeExpenseChart(uid, startDate, endDate) {
-  const canvas = document.getElementById('chart-income-expense');
-  if (!canvas) return;
-
-  const Chart = getChart();
-  if (!Chart) return;
-
+async function buildMonthlyData(uid, startDate, endDate) {
   const transactions = await getTransactions(uid, { startDate, endDate });
-
-  // Group by month
   const months = {};
   for (const t of transactions) {
     const month = t.date ? t.date.substring(0, 7) : 'unknown';
@@ -55,43 +48,126 @@ export async function renderIncomeExpenseChart(uid, startDate, endDate) {
       months[month].expense += t.amount;
     }
   }
-
-  const labels = Object.keys(months).sort().map(m => {
-    const [y, mo] = m.split('-');
-    const date = new Date(parseInt(y), parseInt(mo) - 1, 1);
-    return date.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
-  });
   const sortedKeys = Object.keys(months).sort();
-  const incomes = sortedKeys.map(k => fromCents(months[k].income));
-  const expenses = sortedKeys.map(k => fromCents(months[k].expense));
+  const labels = sortedKeys.map(m => {
+    const [y, mo] = m.split('-');
+    return new Date(parseInt(y), parseInt(mo) - 1, 1)
+      .toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+  });
+  return { sortedKeys, labels, months };
+}
 
-  destroyChart('income-expense');
-  chartInstances['income-expense'] = new Chart(canvas, {
+const barTooltip = {
+  callbacks: {
+    label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+  }
+};
+
+// Formatea valor para datalabels (abreviado para no saturar)
+function dlFmt(v) {
+  if (v === 0 || v == null) return '';
+  const abs = Math.abs(v);
+  if (abs >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
+  if (abs >= 1000) return '$' + (v / 1000).toFixed(1) + 'k';
+  return '$' + v.toLocaleString('es-MX', { maximumFractionDigits: 0 });
+}
+
+// Config datalabels para barras verticales
+const dlBar = {
+  anchor: 'end',
+  align: 'end',
+  offset: 2,
+  font: { size: 10, weight: '600' },
+  color: '#374151',
+  formatter: dlFmt,
+  clip: false,
+};
+
+// Config datalabels para barras apiladas (mostrar solo en segmento "top")
+const dlBarStacked = {
+  anchor: 'center',
+  align: 'center',
+  font: { size: 10, weight: '600' },
+  color: '#fff',
+  formatter: (v) => v > 0 ? dlFmt(v) : '',
+};
+
+// Config datalabels para barras horizontales
+const dlBarH = {
+  anchor: 'end',
+  align: 'right',
+  offset: 4,
+  font: { size: 10, weight: '600' },
+  color: '#374151',
+  formatter: dlFmt,
+  clip: false,
+};
+
+// Config datalabels para líneas (solo puntos extremos)
+function dlLine(totalPoints) {
+  return {
+    anchor: 'top',
+    align: 'top',
+    offset: 4,
+    font: { size: 9, weight: '600' },
+    color: '#374151',
+    formatter: dlFmt,
+    display: (ctx) => ctx.dataIndex === 0 || ctx.dataIndex === totalPoints - 1,
+  };
+}
+
+/**
+ * Gráfica de barras: Ingresos por mes
+ */
+export async function renderIncomeChart(uid, startDate, endDate) {
+  const canvas = document.getElementById('chart-income');
+  if (!canvas) return;
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const { sortedKeys, labels, months } = await buildMonthlyData(uid, startDate, endDate);
+  const incomes = sortedKeys.map(k => fromCents(months[k].income));
+
+  destroyChart('income');
+  chartInstances['income'] = new Chart(canvas, {
     type: 'bar',
     data: {
       labels,
-      datasets: [
-        { label: 'Ingresos', data: incomes, backgroundColor: COLORS.success + 'CC', borderColor: COLORS.success, borderWidth: 1 },
-        { label: 'Egresos', data: expenses, backgroundColor: COLORS.danger + 'CC', borderColor: COLORS.danger, borderWidth: 1 }
-      ]
+      datasets: [{ label: 'Ingresos', data: incomes, backgroundColor: COLORS.success + 'CC', borderColor: COLORS.success, borderWidth: 1, borderRadius: 4 }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { callback: v => '$' + v.toLocaleString('es-MX') }
-        }
-      }
+      plugins: { legend: { display: false }, tooltip: barTooltip, datalabels: dlBar },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
+    }
+  });
+}
+
+/**
+ * Gráfica de barras: Egresos por mes
+ */
+export async function renderExpenseChart(uid, startDate, endDate) {
+  const canvas = document.getElementById('chart-expense');
+  if (!canvas) return;
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const { sortedKeys, labels, months } = await buildMonthlyData(uid, startDate, endDate);
+  const expenses = sortedKeys.map(k => fromCents(months[k].expense));
+
+  destroyChart('expense');
+  chartInstances['expense'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Egresos', data: expenses, backgroundColor: COLORS.danger + 'CC', borderColor: COLORS.danger, borderWidth: 1, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: barTooltip, datalabels: dlBar },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
     }
   });
 }
@@ -143,7 +219,8 @@ export async function renderExpenseByCategoryChart(uid, startDate, endDate) {
           callbacks: {
             label: ctx => `${ctx.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
           }
-        }
+        },
+        datalabels: { display: false }
       }
     }
   });
@@ -188,7 +265,8 @@ export async function renderAccountBalancesChart(uid) {
           callbacks: {
             label: ctx => `Saldo: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
           }
-        }
+        },
+        datalabels: dlBarH
       },
       scales: {
         x: { ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
@@ -225,7 +303,7 @@ export async function renderGoalsProgressChart(uid) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
+      plugins: { legend: { position: 'top' }, datalabels: dlBarStacked },
       scales: {
         y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
       }
@@ -262,7 +340,7 @@ export async function renderDebtsChart(uid) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
+      plugins: { legend: { position: 'top' }, datalabels: dlBarStacked },
       scales: {
         y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
       }
@@ -337,9 +415,140 @@ export async function renderMonthlyTrendChart(uid) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
+      plugins: { legend: { position: 'top' }, datalabels: dlLine(months.length) },
       scales: {
         y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
+      }
+    }
+  });
+}
+
+/**
+ * Gráfica de barras: Invertido vs Valor actual por holding
+ */
+export async function renderInvestmentsChart(uid) {
+  const canvas = document.getElementById('chart-investments');
+  if (!canvas) return;
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const investments = await getInvestments(uid);
+  if (!investments.length) {
+    destroyChart('investments');
+    canvas.closest('.chart-container').innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:2rem">Sin inversiones registradas</p>';
+    return;
+  }
+
+  const labels = investments.map(i => i.ticker);
+  const invested = investments.map(i => fromCents(i.totalInvestedCents));
+  const current = investments.map(i => fromCents(i.currentValueCents));
+
+  destroyChart('investments');
+  chartInstances['investments'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Invertido', data: invested, backgroundColor: COLORS.info + 'CC', borderColor: COLORS.info, borderWidth: 1, borderRadius: 4 },
+        { label: 'Valor actual', data: current, backgroundColor: COLORS.success + 'CC', borderColor: COLORS.success, borderWidth: 1, borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+          }
+        },
+        datalabels: dlBar
+      },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
+    }
+  });
+}
+
+/**
+ * Gráfica de líneas: proyección de rendimientos a 12 meses por cuenta de inversión
+ */
+export async function renderYieldProjectionChart(uid) {
+  const canvas = document.getElementById('chart-yield-projection');
+  if (!canvas) return;
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const invAccounts = await getInvestmentAccountsYield(uid);
+  if (!invAccounts.length) {
+    destroyChart('yield-projection');
+    canvas.closest('.chart-container').innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:2rem">Sin cuentas de inversión con rendimiento configurado</p>';
+    return;
+  }
+
+  // Generar etiquetas de los próximos 12 meses
+  const today = new Date();
+  const labels = [];
+  for (let i = 0; i <= 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    labels.push(d.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' }));
+  }
+
+  const datasets = invAccounts.map((a, idx) => {
+    // Balance actual = base + yield ya acumulado hasta hoy
+    const currentBalance = a.baseBalance + calcYieldCents(a.baseBalance, a.annualYield, a.createdAt);
+    const data = labels.map((_, i) => {
+      const daysAhead = i * 30.44;
+      const futureFactor = Math.pow(1 + a.annualYield / 100, daysAhead / 365);
+      return fromCents(Math.round(currentBalance * futureFactor));
+    });
+    return {
+      label: a.name,
+      data,
+      borderColor: COLORS.palette[idx % COLORS.palette.length],
+      backgroundColor: COLORS.palette[idx % COLORS.palette.length] + '18',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 3
+    };
+  });
+
+  // Línea de total combinado si hay más de una cuenta
+  if (invAccounts.length > 1) {
+    const totalData = labels.map((_, i) => {
+      return datasets.reduce((sum, ds) => sum + ds.data[i], 0);
+    });
+    datasets.push({
+      label: 'Total',
+      data: totalData,
+      borderColor: COLORS.warning,
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderDash: [6, 3],
+      fill: false,
+      tension: 0.4,
+      pointRadius: 0
+    });
+  }
+
+  destroyChart('yield-projection');
+  chartInstances['yield-projection'] = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+          }
+        },
+        datalabels: dlLine(labels.length)
+      },
+      scales: {
+        y: { beginAtZero: false, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
       }
     }
   });
@@ -350,11 +559,13 @@ export async function renderMonthlyTrendChart(uid) {
  */
 export async function updateAllCharts(uid, startDate, endDate) {
   await Promise.all([
-    renderIncomeExpenseChart(uid, startDate, endDate),
+    renderIncomeChart(uid, startDate, endDate),
+    renderExpenseChart(uid, startDate, endDate),
     renderExpenseByCategoryChart(uid, startDate, endDate),
     renderAccountBalancesChart(uid),
-    renderGoalsProgressChart(uid),
     renderDebtsChart(uid),
-    renderMonthlyTrendChart(uid)
+    renderMonthlyTrendChart(uid),
+    renderInvestmentsChart(uid),
+    renderYieldProjectionChart(uid)
   ]);
 }

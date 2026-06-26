@@ -1,5 +1,5 @@
-import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate } from './utils.js';
+import { createDoc, readDocs, updateDocById, deleteDocById, getDocById } from './firestore.js';
+import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 
 /**
  * Crea una nueva deuda
@@ -58,8 +58,7 @@ export async function deleteDebt(uid, id) {
  * Registra un pago parcial o total de una deuda (en centavos)
  */
 export async function registerDebtPayment(uid, debtId, amountCents) {
-  const debts = await readDocs(uid, 'debts');
-  const debt = debts.find(d => d.id === debtId);
+  const debt = await getDocById(uid, 'debts', debtId);
   if (!debt) throw new Error('Deuda no encontrada.');
 
   const newPending = Math.max(0, (debt.pendingAmount || 0) - amountCents);
@@ -118,12 +117,40 @@ export async function renderDebtsList(uid) {
           </div>
           ${d.dueDate ? `<p class="debt-due-date">Vencimiento: ${formatDate(d.dueDate)}</p>` : ''}
           <div class="debt-actions">
+            <button class="btn btn-sm btn-outline" onclick="window._editDebt('${d.id}', '${uid}')">Editar</button>
             <button class="btn btn-sm btn-danger" onclick="window._deleteDebt('${d.id}', '${uid}')">Eliminar</button>
           </div>
         </div>
       `).join('')}
     </div>
   `;
+}
+
+/**
+ * Recalcula pendingAmount de todas las deudas basándose en las transacciones
+ * de tipo debt_payment registradas en Firestore. Repara datos históricos.
+ */
+export async function recalculateDebtBalances(uid) {
+  const [debts, transactions] = await Promise.all([
+    readDocs(uid, 'debts'),
+    readDocs(uid, 'transactions')
+  ]);
+
+  const payments = transactions.filter(t => t.type === 'debt_payment' && t.debtId);
+
+  const paymentsByDebt = {};
+  for (const p of payments) {
+    paymentsByDebt[p.debtId] = (paymentsByDebt[p.debtId] || 0) + (p.amount || 0);
+  }
+
+  const updates = debts.map(async (debt) => {
+    const totalPaid = paymentsByDebt[debt.id] || 0;
+    const newPending = Math.max(0, (debt.initialAmount || 0) - totalPaid);
+    const status = newPending <= 0 ? 'paid' : 'active';
+    await updateDocById(uid, 'debts', debt.id, { pendingAmount: newPending, status });
+  });
+
+  await Promise.all(updates);
 }
 
 /**
@@ -135,6 +162,9 @@ export function setupDebtsSection(uid) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btn = form.querySelector('button[type="submit"]');
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Guardando...';
     try {
       await createDebt(uid, {
         name: document.getElementById('debt-name').value,
@@ -145,9 +175,12 @@ export function setupDebtsSection(uid) {
       });
       showToast('Deuda registrada correctamente', 'success');
       form.reset();
+      dispatchDataChange();
       await renderDebtsList(uid);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Error al registrar deuda', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
     }
   });
 
@@ -156,11 +189,85 @@ export function setupDebtsSection(uid) {
     try {
       await deleteDebt(uid, id);
       showToast('Deuda eliminada', 'success');
+      dispatchDataChange();
       await renderDebtsList(uid);
     } catch (err) {
       showToast(err.message, 'error');
     }
   };
+
+  window._editDebt = async (id, uid) => {
+    const debts = await readDocs(uid, 'debts');
+    const d = debts.find(x => x.id === id);
+    if (!d) return;
+
+    openEditModal('Editar deuda', `
+      <form id="edit-debt-form" class="form-grid" style="padding:1.25rem 1.5rem 1.5rem">
+        <div class="form-group form-full">
+          <label>Nombre</label>
+          <input type="text" id="ed-name" value="${d.name}" required />
+        </div>
+        <div class="form-group">
+          <label>Acreedor</label>
+          <input type="text" id="ed-creditor" value="${d.creditor || ''}" />
+        </div>
+        <div class="form-group">
+          <label>Fecha de vencimiento</label>
+          <input type="date" id="ed-due" value="${d.dueDate || ''}" />
+        </div>
+        <div class="form-group form-full">
+          <label>Descripción / notas</label>
+          <textarea id="ed-description" rows="2">${d.description || ''}</textarea>
+        </div>
+        <div class="form-group form-full modal-actions">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    `);
+
+    document.getElementById('edit-debt-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        await updateDebt(uid, id, {
+          name: document.getElementById('ed-name').value.trim(),
+          creditor: document.getElementById('ed-creditor').value,
+          dueDate: document.getElementById('ed-due').value || null,
+          description: document.getElementById('ed-description').value
+        });
+        showToast('Deuda actualizada', 'success');
+        closeEditModal();
+        dispatchDataChange();
+        await renderDebtsList(uid);
+      } catch (err) {
+        showToast(err.message || 'Error al actualizar deuda', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
+      }
+    });
+  };
+
+  const recalcBtn = document.getElementById('btn-recalculate-debts');
+  if (recalcBtn) {
+    recalcBtn.addEventListener('click', async () => {
+      recalcBtn.disabled = true;
+      recalcBtn.textContent = 'Recalculando...';
+      try {
+        await recalculateDebtBalances(uid);
+        showToast('Saldos de deudas recalculados correctamente', 'success');
+        dispatchDataChange();
+        await renderDebtsList(uid);
+      } catch (err) {
+        showToast('Error al recalcular: ' + err.message, 'error');
+      } finally {
+        recalcBtn.disabled = false;
+        recalcBtn.textContent = 'Recalcular saldos';
+      }
+    });
+  }
 
   renderDebtsList(uid);
 }
