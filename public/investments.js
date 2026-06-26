@@ -1,27 +1,34 @@
 import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
 import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO, dispatchDataChange, openEditModal, closeEditModal } from './utils.js';
 
-// ─── Precio actual via Yahoo Finance (sin API key) ───────────────────────────
+// ─── Precio actual via Yahoo Finance con proxies de respaldo ─────────────────
+
+const PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+];
 
 export async function fetchCurrentPrice(ticker) {
-  try {
-    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
-    // Yahoo Finance bloquea CORS desde el browser — usamos proxy
-    const url = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const meta = data?.chart?.result?.[0]?.meta;
-    if (!meta) return null;
-    return {
-      price: meta.regularMarketPrice ?? null,
-      previousClose: meta.previousClose ?? meta.chartPreviousClose ?? null,
-      currency: meta.currency ?? 'USD',
-      shortName: meta.shortName ?? ticker
-    };
-  } catch {
-    return null;
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+
+  for (const proxy of PROXIES) {
+    try {
+      const res = await fetch(proxy(yahooUrl));
+      if (!res.ok) continue;
+      const data = await res.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (!meta || meta.regularMarketPrice == null) continue;
+      return {
+        price: meta.regularMarketPrice,
+        previousClose: meta.previousClose ?? meta.chartPreviousClose ?? null,
+        currency: meta.currency ?? 'USD',
+        shortName: meta.shortName ?? ticker
+      };
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 // ─── CRUD inversiones ─────────────────────────────────────────────────────────
@@ -487,7 +494,8 @@ export async function setupInvestmentsSection(uid) {
 
   // Handlers globales
   window._invRefreshPrice = async (id, uid) => {
-    const btn = event.currentTarget;
+    const btn = event?.currentTarget;
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
     try {
       const investments = await readDocs(uid, 'investments');
       const inv = investments.find(i => i.id === id);
@@ -496,7 +504,9 @@ export async function setupInvestmentsSection(uid) {
       showToast(ok ? `Precio de ${inv.ticker} actualizado` : `No se pudo obtener precio de ${inv.ticker}`, ok ? 'success' : 'error');
       await renderInvestmentsList(uid);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Error al actualizar precio', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '↻'; }
     }
   };
 
