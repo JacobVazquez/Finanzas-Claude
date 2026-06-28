@@ -7,7 +7,7 @@ import { setupCategoriesSection, initDefaultCategories, populateCategorySelects 
 import { setupGoalsSection } from './goals.js';
 import { setupDebtsSection, renderDebtsList } from './debts.js';
 import { setupImportExport } from './import-export.js';
-import { setupInvestmentsSection } from './investments.js';
+import { setupInvestmentsSection, autoRefreshAllPrices } from './investments.js';
 import { renderGoalsList } from './goals.js';
 import { renderAccountCards } from './accounts.js';
 import { renderTransactionsList } from './transactions.js';
@@ -39,6 +39,10 @@ function navigateTo(sectionId) {
   switch (sectionId) {
     case 'dashboard':
       if (window._dashboardReload) window._dashboardReload();
+      autoRefreshAllPrices(_currentUid, { silent: true });
+      break;
+    case 'investments':
+      autoRefreshAllPrices(_currentUid);
       break;
     case 'debts':
       renderDebtsList(_currentUid);
@@ -130,6 +134,9 @@ async function initApp(user) {
 
     // Load dashboard
     await loadDashboard(user.uid, 'month');
+
+    // Auto-refresh inicial de precios (en background, sin bloquear)
+    autoRefreshAllPrices(user.uid, { silent: true });
 
     appInitialized = true;
   } catch (err) {

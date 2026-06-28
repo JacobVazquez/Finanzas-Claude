@@ -162,6 +162,47 @@ export async function refreshPrice(uid, investment) {
   return true;
 }
 
+// ─── Auto-refresh de precios ──────────────────────────────────────────────────
+
+const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // no refrescar más de una vez cada 5 min
+let _lastAutoRefresh = 0;
+
+export async function autoRefreshAllPrices(uid, { silent = false } = {}) {
+  const now = Date.now();
+  if (now - _lastAutoRefresh < AUTO_REFRESH_INTERVAL_MS) return;
+  _lastAutoRefresh = now;
+
+  let investments;
+  try {
+    investments = await readDocs(uid, 'investments');
+  } catch { return; }
+
+  if (!investments || investments.length === 0) return;
+
+  const indicator = document.getElementById('inv-auto-refresh-indicator');
+  if (indicator) indicator.style.display = '';
+
+  let updated = 0;
+  await Promise.all(investments.map(async inv => {
+    try {
+      const ok = await refreshPrice(uid, inv);
+      if (ok) updated++;
+    } catch { /* ignorar errores individuales */ }
+  }));
+
+  if (indicator) indicator.style.display = 'none';
+
+  if (updated > 0) {
+    const invSection = document.getElementById('section-investments');
+    if (invSection?.classList.contains('active')) {
+      await renderInvestmentsList(uid);
+    }
+    if (!silent) {
+      showToast(`Precios actualizados (${updated}/${investments.length})`, 'success');
+    }
+  }
+}
+
 // ─── Render ───────────────────────────────────────────────────────────────────
 
 function fmtShares(n) {
