@@ -72,6 +72,15 @@ function dlFmt(v) {
   return '$' + v.toLocaleString('es-MX', { maximumFractionDigits: 0 });
 }
 
+// Igual que dlFmt pero con 2 decimales (para inversiones donde la precisión importa)
+function dlFmtDec(v) {
+  if (v === 0 || v == null) return '';
+  const abs = Math.abs(v);
+  if (abs >= 1000000) return '$' + (v / 1000000).toFixed(2) + 'M';
+  if (abs >= 1000) return '$' + (v / 1000).toFixed(2) + 'k';
+  return '$' + v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // Config datalabels para barras verticales
 const dlBar = {
   anchor: 'end',
@@ -463,7 +472,7 @@ export async function renderInvestmentsChart(uid) {
             label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
           }
         },
-        datalabels: dlBar
+        datalabels: { ...dlBar, formatter: dlFmtDec }
       },
       scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } } }
     }
@@ -545,7 +554,7 @@ export async function renderYieldProjectionChart(uid) {
             label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
           }
         },
-        datalabels: dlLine(labels.length)
+        datalabels: { ...dlLine(labels.length), formatter: dlFmtDec }
       },
       scales: {
         y: { beginAtZero: false, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
