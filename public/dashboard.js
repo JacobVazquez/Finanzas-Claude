@@ -1,7 +1,16 @@
 import { readDocs } from './firestore.js';
-import { formatMXN, firstDayOfMonth, lastDayOfMonth, todayISO, dateToISO, showToast } from './utils.js';
-import { getTransactions, renderTransactionsList } from './transactions.js';
-import { getAccounts, calculateAccountBalance, renderAccountCards } from './accounts.js';
+import { formatMXN, firstDayOfMonth, lastDayOfMonth, todayISO, dateToISO, showToast, dispatchDataChange } from './utils.js';
+import { getTransactions, renderTransactionsList, addIncome, addExpense } from './transactions.js';
+import { getAccounts, calculateAccountBalance, renderAccountCards, getTotalYieldCents } from './accounts.js';
+import { getExpenseCategories, getIncomeTypes } from './categories.js';
+
+// Estado del filtro activo en el dashboard
+let _activeFilter = 'month';
+let _customStart = null;
+let _customEnd = null;
+let _dashboardUid = null;
+
+export function getActiveFilter() { return _activeFilter; }
 
 /**
  * Calcula KPIs para un periodo dado
@@ -27,17 +36,20 @@ export async function calculateKPIs(uid, startDate, endDate) {
   const savingsRate = totalIncome > 0 ? Math.round((balance / totalIncome) * 100) : 0;
 
   // Net worth: sum of all account balances
-  const balances = await Promise.all(accounts.map(a => calculateAccountBalance(uid, a.id)));
+  const [balances, totalYield] = await Promise.all([
+    Promise.all(accounts.map(a => calculateAccountBalance(uid, a.id))),
+    getTotalYieldCents(uid)
+  ]);
   const netWorth = balances.reduce((sum, b) => sum + b, 0);
 
-  return { totalIncome, totalExpenses, balance, savingsRate, netWorth };
+  return { totalIncome, totalExpenses, balance, savingsRate, netWorth, totalYield };
 }
 
 /**
  * Renderiza las tarjetas KPI
  */
 export function renderKPICards(data) {
-  const { totalIncome, totalExpenses, balance, savingsRate, netWorth } = data;
+  const { totalIncome, totalExpenses, balance, savingsRate, netWorth, totalYield } = data;
 
   const setEl = (id, html) => {
     const el = document.getElementById(id);
@@ -46,6 +58,7 @@ export function renderKPICards(data) {
 
   setEl('kpi-income', formatMXN(totalIncome));
   setEl('kpi-expenses', formatMXN(totalExpenses));
+  setEl('kpi-total-yield', formatMXN(totalYield || 0));
   setEl('kpi-balance', formatMXN(balance));
   setEl('kpi-savings-rate', `${savingsRate}%`);
   setEl('kpi-net-worth', formatMXN(netWorth));
@@ -184,15 +197,155 @@ export async function loadDashboard(uid, filter = 'month', customStart, customEn
 }
 
 /**
- * Inicializa los filtros del dashboard
+ * Abre un modal por id
+ */
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'flex';
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+/**
+ * Popula los selects de cuentas/categorias dentro de los modales rapidos
+ */
+async function populateModalSelects(uid) {
+  const [accounts, categories, incomeTypes] = await Promise.all([
+    getAccounts(uid),
+    getExpenseCategories(uid),
+    getIncomeTypes(uid)
+  ]);
+
+  const accountOptions = '<option value="">-- Seleccionar cuenta --</option>' +
+    accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+
+  document.querySelectorAll('.select-account-modal').forEach(sel => {
+    sel.innerHTML = accountOptions;
+  });
+
+  const expCatOptions = '<option value="">-- Sin categoria --</option>' +
+    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.querySelectorAll('.select-expense-category-modal').forEach(sel => {
+    sel.innerHTML = expCatOptions;
+  });
+
+  const incTypeOptions = '<option value="">-- Sin tipo --</option>' +
+    incomeTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  document.querySelectorAll('.select-income-type-modal').forEach(sel => {
+    sel.innerHTML = incTypeOptions;
+  });
+}
+
+/**
+ * Configura los botones de acceso rapido y sus modales en el dashboard
+ */
+export async function setupDashboardQuickActions(uid) {
+  await populateModalSelects(uid);
+
+  // Fechas por defecto
+  const today = todayISO();
+  const qiDate = document.getElementById('qi-date');
+  const qeDate = document.getElementById('qe-date');
+  if (qiDate) qiDate.value = today;
+  if (qeDate) qeDate.value = today;
+
+  // Abrir modales
+  document.getElementById('btn-quick-income')?.addEventListener('click', () => openModal('modal-quick-income'));
+  document.getElementById('btn-quick-expense')?.addEventListener('click', () => openModal('modal-quick-expense'));
+
+  // Cerrar modales (botones con data-close y click fuera)
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
+
+  // Tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('modal-quick-income');
+      closeModal('modal-quick-expense');
+    }
+  });
+
+  // Form ingreso rapido
+  const qiForm = document.getElementById('quick-income-form');
+  if (qiForm) {
+    qiForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = qiForm.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      try {
+        await addIncome(uid, {
+          accountId: document.getElementById('qi-account').value,
+          incomeTypeId: document.getElementById('qi-type').value,
+          amount: document.getElementById('qi-amount').value,
+          date: document.getElementById('qi-date').value,
+          description: document.getElementById('qi-description').value
+        });
+        showToast('Ingreso registrado', 'success');
+        qiForm.reset();
+        document.getElementById('qi-date').value = todayISO();
+        closeModal('modal-quick-income');
+        dispatchDataChange();
+        await loadDashboard(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // Form egreso rapido
+  const qeForm = document.getElementById('quick-expense-form');
+  if (qeForm) {
+    qeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = qeForm.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      try {
+        await addExpense(uid, {
+          accountId: document.getElementById('qe-account').value,
+          categoryId: document.getElementById('qe-category').value,
+          amount: document.getElementById('qe-amount').value,
+          date: document.getElementById('qe-date').value,
+          description: document.getElementById('qe-description').value
+        });
+        showToast('Egreso registrado', 'success');
+        qeForm.reset();
+        document.getElementById('qe-date').value = todayISO();
+        closeModal('modal-quick-expense');
+        dispatchDataChange();
+        await loadDashboard(uid);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+}
+
+/**
+ * Inicializa los filtros del dashboard y el listener de auto-refresh
  */
 export function setupDashboardFilters(uid) {
+  _dashboardUid = uid;
+
   const filterBtns = document.querySelectorAll('.dashboard-filter-btn');
   filterBtns.forEach(btn => {
     btn.addEventListener('click', async () => {
       filterBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const filter = btn.dataset.filter;
+      _activeFilter = filter;
       const customPanel = document.getElementById('custom-date-panel');
       if (customPanel) {
         customPanel.style.display = filter === 'custom' ? 'flex' : 'none';
@@ -212,7 +365,16 @@ export function setupDashboardFilters(uid) {
         showToast('Selecciona las fechas de inicio y fin', 'error');
         return;
       }
+      _customStart = start;
+      _customEnd = end;
       await loadDashboard(uid, 'custom', start, end);
     });
   }
+
+  // Auto-refresh: recarga el dashboard cuando cualquier modulo cambia datos
+  window.addEventListener('finanzas:changed', async () => {
+    const dashSection = document.getElementById('section-dashboard');
+    if (!dashSection?.classList.contains('active')) return;
+    await loadDashboard(uid, _activeFilter, _customStart, _customEnd);
+  });
 }
