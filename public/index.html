@@ -499,6 +499,46 @@
         <h2>Presupuestos Mensuales</h2>
       </div>
 
+      <!-- Budget Summary KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-worth">
+          <div class="kpi-icon">🎯</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Presupuestado</span>
+            <span class="kpi-value" id="budget-kpi-total">$0.00</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-expenses">
+          <div class="kpi-icon">💸</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Gastado</span>
+            <span class="kpi-value" id="budget-kpi-spent">$0.00</span>
+          </div>
+        </div>
+        <div id="budget-kpi-available-card" class="kpi-card">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Disponible</span>
+            <span class="kpi-value" id="budget-kpi-available">$0.00</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-savings">
+          <div class="kpi-icon">📊</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Uso del Presupuesto</span>
+            <span class="kpi-value" id="budget-kpi-percent">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget vs Spent Chart -->
+      <div class="card">
+        <h3 class="card-title">Presupuesto vs. Gasto por Categoria</h3>
+        <div class="chart-container">
+          <canvas id="chart-budget-vs-spent"></canvas>
+        </div>
+      </div>
+
       <div class="two-col-layout">
         <div class="card">
           <h3 class="card-title">Nuevo Presupuesto</h3>

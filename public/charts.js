@@ -346,6 +346,56 @@ export async function renderMonthlyTrendChart(uid) {
 }
 
 /**
+ * Renderiza barras de presupuesto vs gasto por categoria
+ */
+export async function renderBudgetVsSpentChart(uid) {
+  const canvas = document.getElementById('chart-budget-vs-spent');
+  if (!canvas) return;
+
+  const Chart = getChart();
+  if (!Chart) return;
+
+  const { getBudgetsWithProgress } = await import('./budgets.js');
+  const budgets = await getBudgetsWithProgress(uid);
+
+  const labels = budgets.map(b => b.categoryName);
+  const limits = budgets.map(b => fromCents(b.limitAmount));
+  const spent = budgets.map(b => fromCents(b.spent));
+  const spentColors = budgets.map(b => {
+    if (b.status === 'over') return COLORS.danger + 'CC';
+    if (b.status === 'warning') return COLORS.warning + 'CC';
+    return COLORS.success + 'CC';
+  });
+
+  destroyChart('budget-vs-spent');
+  chartInstances['budget-vs-spent'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Presupuesto', data: limits, backgroundColor: COLORS.muted + '55', borderRadius: 4 },
+        { label: 'Gastado', data: spent, backgroundColor: spentColors, borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
+      }
+    }
+  });
+}
+
+/**
  * Actualiza todas las graficas
  */
 export async function updateAllCharts(uid, startDate, endDate) {

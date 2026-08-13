@@ -75,6 +75,45 @@ export async function getBudgetsWithProgress(uid, startDate = firstDayOfMonth(),
 }
 
 /**
+ * Calcula el resumen global de presupuestos del mes actual (o rango dado)
+ */
+export async function calculateBudgetSummary(uid, startDate = firstDayOfMonth(), endDate = lastDayOfMonth()) {
+  const budgets = await getBudgetsWithProgress(uid, startDate, endDate);
+
+  const totalBudgeted = budgets.reduce((sum, b) => sum + b.limitAmount, 0);
+  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+  const totalRemaining = totalBudgeted - totalSpent;
+  const percentUsed = totalBudgeted > 0 ? Math.round((totalSpent / totalBudgeted) * 100) : 0;
+
+  return { totalBudgeted, totalSpent, totalRemaining, percentUsed };
+}
+
+/**
+ * Renderiza las tarjetas KPI del resumen de presupuestos
+ */
+export async function renderBudgetSummary(uid) {
+  const setEl = (id, html) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  };
+
+  if (!document.getElementById('budget-kpi-total')) return;
+
+  const { totalBudgeted, totalSpent, totalRemaining, percentUsed } = await calculateBudgetSummary(uid);
+
+  setEl('budget-kpi-total', formatMXN(totalBudgeted));
+  setEl('budget-kpi-spent', formatMXN(totalSpent));
+  setEl('budget-kpi-available', formatMXN(totalRemaining));
+  setEl('budget-kpi-percent', `${percentUsed}%`);
+
+  const availableCard = document.getElementById('budget-kpi-available-card');
+  if (availableCard) {
+    availableCard.classList.toggle('kpi-positive', totalRemaining >= 0);
+    availableCard.classList.toggle('kpi-negative', totalRemaining < 0);
+  }
+}
+
+/**
  * Renderiza la lista de presupuestos con barras de progreso
  */
 export async function renderBudgetsList(uid) {
@@ -123,6 +162,18 @@ export async function renderBudgetsList(uid) {
 }
 
 /**
+ * Refresca la lista, el resumen KPI y la grafica de presupuestos
+ */
+async function refreshBudgetsView(uid) {
+  const { renderBudgetVsSpentChart } = await import('./charts.js');
+  await Promise.all([
+    renderBudgetsList(uid),
+    renderBudgetSummary(uid),
+    renderBudgetVsSpentChart(uid)
+  ]);
+}
+
+/**
  * Inicializa la seccion de presupuestos
  */
 export async function setupBudgetsSection(uid) {
@@ -139,7 +190,7 @@ export async function setupBudgetsSection(uid) {
         });
         showToast('Presupuesto creado', 'success');
         form.reset();
-        await renderBudgetsList(uid);
+        await refreshBudgetsView(uid);
       } catch (err) {
         showToast(err.message, 'error');
       }
@@ -151,11 +202,11 @@ export async function setupBudgetsSection(uid) {
     try {
       await deleteBudget(uid, id);
       showToast('Presupuesto eliminado', 'success');
-      await renderBudgetsList(uid);
+      await refreshBudgetsView(uid);
     } catch (err) {
       showToast(err.message, 'error');
     }
   };
 
-  await renderBudgetsList(uid);
+  await refreshBudgetsView(uid);
 }
