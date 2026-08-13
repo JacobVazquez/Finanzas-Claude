@@ -744,6 +744,8 @@ textarea { resize: vertical; min-height: 60px; }
 }
 
 .progress-fill-debt { background: var(--success); }
+.progress-fill-warning { background: var(--warning); }
+.progress-fill-over { background: var(--danger); }
 
 .progress-label {
   font-size: 0.8rem;
@@ -773,6 +775,16 @@ textarea { resize: vertical; min-height: 60px; }
 .goal-card.goal-completed {
   background: #F0FDF4;
   border-color: #BBF7D0;
+}
+
+.budget-card.budget-warning {
+  background: #FFFBEB;
+  border-color: #FDE68A;
+}
+
+.budget-card.budget-over {
+  background: #FEF2F2;
+  border-color: #FECACA;
 }
 
 .goal-card-header {

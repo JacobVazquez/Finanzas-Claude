@@ -95,6 +95,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
         <span>Categorias</span>
       </a>
+      <a href="#" class="nav-item" data-nav="budgets">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
+        <span>Presupuestos</span>
+      </a>
       <a href="#" class="nav-item" data-nav="goals">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
         <span>Metas</span>
@@ -485,6 +489,75 @@
             <button type="submit" class="btn btn-primary btn-sm">Agregar</button>
           </form>
           <div id="income-types-list" class="mt-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== BUDGETS ========== -->
+    <section id="section-budgets" class="section">
+      <div class="section-header">
+        <h2>Presupuestos Mensuales</h2>
+      </div>
+
+      <!-- Budget Summary KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-worth">
+          <div class="kpi-icon">🎯</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Presupuestado</span>
+            <span class="kpi-value" id="budget-kpi-total">$0.00</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-expenses">
+          <div class="kpi-icon">💸</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Gastado</span>
+            <span class="kpi-value" id="budget-kpi-spent">$0.00</span>
+          </div>
+        </div>
+        <div id="budget-kpi-available-card" class="kpi-card">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Disponible</span>
+            <span class="kpi-value" id="budget-kpi-available">$0.00</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-savings">
+          <div class="kpi-icon">📊</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Uso del Presupuesto</span>
+            <span class="kpi-value" id="budget-kpi-percent">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget vs Spent Chart -->
+      <div class="card">
+        <h3 class="card-title">Presupuesto vs. Gasto por Categoria</h3>
+        <div class="chart-container">
+          <canvas id="chart-budget-vs-spent"></canvas>
+        </div>
+      </div>
+
+      <div class="two-col-layout">
+        <div class="card">
+          <h3 class="card-title">Nuevo Presupuesto</h3>
+          <form id="budget-form">
+            <div class="form-group">
+              <label>Categoria de gasto</label>
+              <select id="budget-category" class="select-expense-category" required></select>
+            </div>
+            <div class="form-group">
+              <label>Limite mensual (MXN)</label>
+              <input type="number" id="budget-limit-amount" placeholder="0.00" min="0.01" step="0.01" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Crear Presupuesto</button>
+          </form>
+        </div>
+
+        <div class="card card-full">
+          <h3 class="card-title">Presupuestos del Mes Actual</h3>
+          <div id="budgets-list"></div>
         </div>
       </div>
     </section>

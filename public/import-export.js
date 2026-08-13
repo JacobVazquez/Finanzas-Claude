@@ -6,7 +6,7 @@ import { getGoals } from './goals.js';
 import { getDebts } from './debts.js';
 import { formatMXN, fromCents, showToast, todayISO } from './utils.js';
 
-const COLLECTIONS = ['accounts', 'transactions', 'expenseCategories', 'incomeTypes', 'goals', 'debts'];
+const COLLECTIONS = ['accounts', 'transactions', 'expenseCategories', 'incomeTypes', 'goals', 'debts', 'budgets'];
 
 /**
  * Exporta todos los datos del usuario como JSON descargable
