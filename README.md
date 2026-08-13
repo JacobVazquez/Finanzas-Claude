@@ -25,6 +25,7 @@ Aplicación web de finanzas personales construida con HTML, CSS y JavaScript van
 │   ├── accounts.js         # Módulo de cuentas
 │   ├── transactions.js     # Módulo de movimientos
 │   ├── categories.js       # Categorías de gasto/ingreso
+│   ├── budgets.js          # Presupuestos mensuales por categoría
 │   ├── goals.js            # Metas de ahorro
 │   ├── debts.js            # Deudas
 │   ├── dashboard.js        # KPIs y resumen
@@ -142,6 +143,7 @@ Abre `http://localhost:5000` en tu navegador.
 - ✅ Cuentas: efectivo, débito, bancaria, digital
 - ✅ Movimientos: ingresos, egresos, transferencias, pagos de deuda, aportaciones a metas
 - ✅ Categorías personalizables
+- ✅ Presupuestos mensuales por categoría con alertas de progreso
 - ✅ Metas de ahorro con barra de progreso
 - ✅ Deudas con seguimiento de pagos
 - ✅ 6 tipos de gráficas (barras, dona, líneas)
@@ -154,7 +156,6 @@ Abre `http://localhost:5000` en tu navegador.
 
 - [ ] Modo oscuro completo
 - [ ] Notificaciones push para vencimiento de deudas
-- [ ] Presupuestos mensuales por categoría
 - [ ] Escaneo de recibos con OCR
 - [ ] Reportes mensuales por email
 - [ ] Soporte para múltiples monedas

@@ -4,6 +4,7 @@ import { loadDashboard, setupDashboardFilters } from './dashboard.js';
 import { setupAccountsSection } from './accounts.js';
 import { setupTransactionsSection } from './transactions.js';
 import { setupCategoriesSection, initDefaultCategories, populateCategorySelects } from './categories.js';
+import { setupBudgetsSection } from './budgets.js';
 import { setupGoalsSection } from './goals.js';
 import { setupDebtsSection } from './debts.js';
 import { setupImportExport } from './import-export.js';
@@ -13,7 +14,7 @@ import { showToast } from './utils.js';
 // Navigation
 // ============================================================
 
-const sections = ['dashboard', 'accounts', 'transactions', 'categories', 'goals', 'debts', 'export'];
+const sections = ['dashboard', 'accounts', 'transactions', 'categories', 'budgets', 'goals', 'debts', 'export'];
 
 function navigateTo(sectionId) {
   sections.forEach(s => {
@@ -82,6 +83,7 @@ async function initApp(user) {
     setupGoalsSection(user.uid);
     setupDebtsSection(user.uid);
     await setupCategoriesSection(user.uid);
+    await setupBudgetsSection(user.uid);
     setupImportExport(user.uid);
 
     // Navigate to stored section or dashboard
