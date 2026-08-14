@@ -16,6 +16,13 @@ import { showToast } from './utils.js';
 
 const sections = ['dashboard', 'accounts', 'transactions', 'categories', 'budgets', 'goals', 'debts', 'export'];
 
+function setSidebarOpen(open) {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) sidebar.classList.toggle('open', open);
+  if (overlay) overlay.classList.toggle('visible', open);
+}
+
 function navigateTo(sectionId) {
   sections.forEach(s => {
     const el = document.getElementById(`section-${s}`);
@@ -195,8 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (sections.includes(target)) {
         navigateTo(target);
         // Close mobile menu if open
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) sidebar.classList.remove('open');
+        setSidebarOpen(false);
       }
     });
   });
@@ -204,12 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Mobile menu toggle
   document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
     const sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.toggle('open');
+    setSidebarOpen(!sidebar?.classList.contains('open'));
   });
 
   // Close sidebar when clicking overlay
   document.getElementById('sidebar-overlay')?.addEventListener('click', () => {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.remove('open');
+    setSidebarOpen(false);
   });
 });
