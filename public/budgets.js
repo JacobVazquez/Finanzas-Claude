@@ -1,6 +1,6 @@
 import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
 import { formatMXN, toCents, validateAmount, showToast, firstDayOfMonth, lastDayOfMonth } from './utils.js';
-import { getExpenseCategories, populateCategorySelects } from './categories.js';
+import { getExpenseCategoriesWithDisplayNames, populateCategorySelects } from './categories.js';
 import { getTransactions } from './transactions.js';
 
 /**
@@ -42,11 +42,17 @@ export async function deleteBudget(uid, id) {
 export async function getBudgetsWithProgress(uid, startDate = firstDayOfMonth(), endDate = lastDayOfMonth()) {
   const [budgets, categories, expenses] = await Promise.all([
     readDocs(uid, 'budgets'),
-    getExpenseCategories(uid),
+    getExpenseCategoriesWithDisplayNames(uid),
     getTransactions(uid, { startDate, endDate, type: 'expense' })
   ]);
 
-  const categoryMap = Object.fromEntries(categories.map(c => [c.id, c.name]));
+  const categoryMap = Object.fromEntries(categories.map(c => [c.id, c]));
+
+  // Un presupuesto en una categoria principal tambien acumula el gasto de sus subcategorias
+  const childrenOf = {};
+  for (const c of categories) {
+    if (c.parentId) (childrenOf[c.parentId] ||= []).push(c.id);
+  }
 
   const spentByCategory = {};
   for (const tx of expenses) {
@@ -56,15 +62,17 @@ export async function getBudgetsWithProgress(uid, startDate = firstDayOfMonth(),
 
   return budgets
     .map(b => {
-      const spent = spentByCategory[b.categoryId] || 0;
+      const includedIds = [b.categoryId, ...(childrenOf[b.categoryId] || [])];
+      const spent = includedIds.reduce((sum, id) => sum + (spentByCategory[id] || 0), 0);
       const percent = b.limitAmount > 0 ? Math.round((spent / b.limitAmount) * 100) : 0;
       let status = 'ok';
       if (percent >= 100) status = 'over';
       else if (percent >= 80) status = 'warning';
 
+      const category = categoryMap[b.categoryId];
       return {
         ...b,
-        categoryName: categoryMap[b.categoryId] || 'Categoria eliminada',
+        categoryName: category ? category.displayName : 'Categoria eliminada',
         spent,
         remaining: b.limitAmount - spent,
         percent,
