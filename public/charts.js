@@ -1,6 +1,6 @@
 import { getTransactions } from './transactions.js';
 import { getAccounts, calculateAccountBalance } from './accounts.js';
-import { getExpenseCategories } from './categories.js';
+import { getExpenseCategoriesWithDisplayNames } from './categories.js';
 import { getGoals } from './goals.js';
 import { getDebts } from './debts.js';
 import { fromCents, dateToISO } from './utils.js';
@@ -108,10 +108,10 @@ export async function renderExpenseByCategoryChart(uid, startDate, endDate) {
 
   const [transactions, categories] = await Promise.all([
     getTransactions(uid, { startDate, endDate, type: 'expense' }),
-    getExpenseCategories(uid)
+    getExpenseCategoriesWithDisplayNames(uid)
   ]);
 
-  const categoryMap = Object.fromEntries(categories.map(c => [c.id, c.name]));
+  const categoryMap = Object.fromEntries(categories.map(c => [c.id, c.displayName]));
   const data = {};
 
   for (const t of transactions) {

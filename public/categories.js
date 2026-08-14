@@ -41,7 +41,20 @@ export async function initDefaultCategories(uid) {
  */
 export async function getExpenseCategories(uid) {
   const cats = await readDocs(uid, 'expenseCategories');
-  return cats.sort((a, b) => a.name.localeCompare(b.name));
+  return cats.map(c => ({ ...c, parentId: c.parentId || null })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Obtiene las categorias de gasto con un "displayName" que incluye la
+ * categoria principal para las subcategorias (ej. "IAs -> Claude")
+ */
+export async function getExpenseCategoriesWithDisplayNames(uid) {
+  const categories = await getExpenseCategories(uid);
+  const byId = Object.fromEntries(categories.map(c => [c.id, c]));
+  return categories.map(c => {
+    const parent = c.parentId ? byId[c.parentId] : null;
+    return { ...c, displayName: parent ? `${parent.name} → ${c.name}` : c.name };
+  });
 }
 
 /**
@@ -53,15 +66,23 @@ export async function getIncomeTypes(uid) {
 }
 
 /**
- * Crea una nueva categoria de gasto
+ * Crea una nueva categoria de gasto. Si se pasa parentId, se crea como
+ * subcategoria de esa categoria principal.
  */
-export async function createExpenseCategory(uid, name) {
+export async function createExpenseCategory(uid, name, parentId = null) {
   if (!name || !name.trim()) throw new Error('El nombre es requerido.');
   const existing = await getExpenseCategories(uid);
-  if (existing.find(c => c.name.toLowerCase() === name.trim().toLowerCase())) {
-    throw new Error('Ya existe una categoria con ese nombre.');
+
+  if (parentId && !existing.find(c => c.id === parentId)) {
+    throw new Error('La categoria principal no existe.');
   }
-  return await createDoc(uid, 'expenseCategories', { name: name.trim(), isDefault: false });
+
+  const siblings = existing.filter(c => c.parentId === (parentId || null));
+  if (siblings.find(c => c.name.toLowerCase() === name.trim().toLowerCase())) {
+    throw new Error('Ya existe una categoria con ese nombre en este nivel.');
+  }
+
+  return await createDoc(uid, 'expenseCategories', { name: name.trim(), isDefault: false, parentId: parentId || null });
 }
 
 /**
@@ -77,9 +98,14 @@ export async function createIncomeType(uid, name) {
 }
 
 /**
- * Elimina una categoria de gasto
+ * Elimina una categoria de gasto. Si tiene subcategorias, hay que
+ * eliminarlas primero.
  */
 export async function deleteExpenseCategory(uid, id) {
+  const categories = await getExpenseCategories(uid);
+  if (categories.some(c => c.parentId === id)) {
+    throw new Error('Elimina primero las subcategorias de esta categoria.');
+  }
   await deleteDocById(uid, 'expenseCategories', id);
 }
 
@@ -91,6 +117,19 @@ export async function deleteIncomeType(uid, id) {
 }
 
 /**
+ * Agrupa categorias en un arbol de nivel 1: { topLevel: [...], childrenByParent: {id: [...]} }
+ */
+function groupCategoriesByParent(categories) {
+  const topLevel = categories.filter(c => !c.parentId).sort((a, b) => a.name.localeCompare(b.name));
+  const childrenByParent = {};
+  categories.filter(c => c.parentId).forEach(c => {
+    (childrenByParent[c.parentId] ||= []).push(c);
+  });
+  Object.values(childrenByParent).forEach(list => list.sort((a, b) => a.name.localeCompare(b.name)));
+  return { topLevel, childrenByParent };
+}
+
+/**
  * Llena todos los selects de categorias y tipos de ingreso en el DOM
  */
 export async function populateCategorySelects(uid) {
@@ -99,11 +138,24 @@ export async function populateCategorySelects(uid) {
     getIncomeTypes(uid)
   ]);
 
+  const { topLevel, childrenByParent } = groupCategoriesByParent(categories);
+
+  const optionsHtml = topLevel.map(cat => {
+    const children = childrenByParent[cat.id];
+    if (!children || children.length === 0) {
+      return `<option value="${cat.id}">${cat.name}</option>`;
+    }
+    const childOptions = [
+      `<option value="${cat.id}">General</option>`,
+      ...children.map(ch => `<option value="${ch.id}">${ch.name}</option>`)
+    ].join('');
+    return `<optgroup label="${cat.name}">${childOptions}</optgroup>`;
+  }).join('');
+
   // Expense category selects
   document.querySelectorAll('.select-expense-category').forEach(sel => {
     const current = sel.value;
-    sel.innerHTML = '<option value="">-- Seleccionar categoria --</option>' +
-      categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    sel.innerHTML = '<option value="">-- Seleccionar categoria --</option>' + optionsHtml;
     if (current) sel.value = current;
   });
 
@@ -127,18 +179,38 @@ async function renderCategoriesLists(uid) {
     getIncomeTypes(uid)
   ]);
 
+  const { topLevel, childrenByParent } = groupCategoriesByParent(categories);
+
   const expList = document.getElementById('expense-categories-list');
   if (expList) {
-    expList.innerHTML = categories.length === 0
+    expList.innerHTML = topLevel.length === 0
       ? '<p class="empty-state">No hay categorias.</p>'
-      : `<ul class="categories-list">
-          ${categories.map(c => `
-            <li class="category-item">
-              <span class="category-name">${c.name}</span>
-              ${!c.isDefault ? `<button class="btn btn-sm btn-danger" onclick="window._deleteCat('${c.id}', '${uid}')">Eliminar</button>` : '<span class="badge-default">Predefinida</span>'}
-            </li>
-          `).join('')}
-        </ul>`;
+      : `<div class="category-tree">
+          ${topLevel.map(c => {
+            const children = childrenByParent[c.id] || [];
+            return `
+              <div class="category-node">
+                <div class="category-node-header">
+                  <span class="category-name">${c.name}</span>
+                  <div class="category-node-actions">
+                    <button class="btn btn-sm btn-outline" onclick="window._addSubcategory('${c.id}', '${uid}')">+ Subcategoria</button>
+                    ${!c.isDefault ? `<button class="btn btn-sm btn-danger" onclick="window._deleteCat('${c.id}', '${uid}')">Eliminar</button>` : '<span class="badge-default">Predefinida</span>'}
+                  </div>
+                </div>
+                ${children.length > 0 ? `
+                  <ul class="subcategory-list">
+                    ${children.map(ch => `
+                      <li class="subcategory-item">
+                        <span class="category-name">${ch.name}</span>
+                        <button class="btn btn-sm btn-danger" onclick="window._deleteCat('${ch.id}', '${uid}')">Eliminar</button>
+                      </li>
+                    `).join('')}
+                  </ul>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>`;
   }
 
   const incList = document.getElementById('income-types-list');
@@ -193,6 +265,19 @@ export async function setupCategoriesSection(uid) {
       }
     });
   }
+
+  window._addSubcategory = async (parentId, uid) => {
+    const name = prompt('Nombre de la nueva subcategoria:');
+    if (!name || !name.trim()) return;
+    try {
+      await createExpenseCategory(uid, name, parentId);
+      showToast('Subcategoria creada', 'success');
+      await renderCategoriesLists(uid);
+      await populateCategorySelects(uid);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
 
   window._deleteCat = async (id, uid) => {
     if (!confirm('¿Eliminar esta categoria?')) return;

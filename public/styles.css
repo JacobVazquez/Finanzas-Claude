@@ -1024,6 +1024,51 @@ textarea { resize: vertical; min-height: 60px; }
 
 .category-name { font-weight: 500; }
 
+.category-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.category-node {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+}
+
+.category-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.category-node-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.subcategory-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--border);
+}
+
+.subcategory-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
 /* ============================================================
    Toast Notifications
    ============================================================ */
