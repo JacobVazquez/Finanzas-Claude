@@ -1,5 +1,5 @@
 import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO } from './utils.js';
+import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO, notifyDataChanged } from './utils.js';
 
 /**
  * Crea una nueva meta de ahorro
@@ -9,7 +9,7 @@ export async function createGoal(uid, { name, targetAmount, targetDate, descript
   if (!validateAmount(targetAmount)) throw new Error('El monto objetivo debe ser mayor a 0.');
 
   const cents = toCents(targetAmount);
-  return await createDoc(uid, 'goals', {
+  const id = await createDoc(uid, 'goals', {
     name: name.trim(),
     targetAmount: cents,
     accumulated: 0,
@@ -17,6 +17,8 @@ export async function createGoal(uid, { name, targetAmount, targetDate, descript
     description: description || '',
     status: 'active'
   });
+  notifyDataChanged();
+  return id;
 }
 
 /**
@@ -39,6 +41,7 @@ export async function updateGoal(uid, id, data) {
     update.targetAmount = toCents(update.targetAmount);
   }
   await updateDocById(uid, 'goals', id, update);
+  notifyDataChanged();
 }
 
 /**
@@ -46,6 +49,7 @@ export async function updateGoal(uid, id, data) {
  */
 export async function deleteGoal(uid, id) {
   await deleteDocById(uid, 'goals', id);
+  notifyDataChanged();
 }
 
 /**

@@ -14,7 +14,7 @@ import { showToast } from './utils.js';
 // Navigation
 // ============================================================
 
-const sections = ['dashboard', 'accounts', 'transactions', 'categories', 'budgets', 'goals', 'debts', 'export'];
+const sections = ['dashboard', 'budgets', 'accounts', 'transactions', 'categories', 'goals', 'debts', 'export'];
 
 function setSidebarOpen(open) {
   const sidebar = document.getElementById('sidebar');
@@ -66,6 +66,42 @@ function showRegisterPanel() {
 }
 
 // ============================================================
+// Auto-actualizacion de montos
+// ============================================================
+
+let dataChangeHandler = null;
+
+/**
+ * Vuelve a cargar todas las vistas que muestran montos derivados
+ * (dashboard, presupuestos, cuentas, metas, deudas)
+ */
+async function refreshAllDerivedViews(uid) {
+  const [{ refreshDashboard }, { refreshBudgetsView }, { renderAccountsList }, { renderGoalsList }, { renderDebtsList }] = await Promise.all([
+    import('./dashboard.js'),
+    import('./budgets.js'),
+    import('./accounts.js'),
+    import('./goals.js'),
+    import('./debts.js')
+  ]);
+
+  await Promise.all([
+    refreshDashboard(uid),
+    refreshBudgetsView(uid),
+    renderAccountsList(uid),
+    renderGoalsList(uid),
+    renderDebtsList(uid)
+  ]);
+}
+
+function registerDataChangeListener(uid) {
+  if (dataChangeHandler) {
+    document.removeEventListener('finanzas:data-changed', dataChangeHandler);
+  }
+  dataChangeHandler = () => refreshAllDerivedViews(uid);
+  document.addEventListener('finanzas:data-changed', dataChangeHandler);
+}
+
+// ============================================================
 // App Initialization
 // ============================================================
 
@@ -92,6 +128,7 @@ async function initApp(user) {
     await setupCategoriesSection(user.uid);
     await setupBudgetsSection(user.uid);
     setupImportExport(user.uid);
+    registerDataChangeListener(user.uid);
 
     // Navigate to stored section or dashboard
     const lastSection = sessionStorage.getItem('currentSection') || 'dashboard';
@@ -216,5 +253,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Close sidebar when clicking overlay
   document.getElementById('sidebar-overlay')?.addEventListener('click', () => {
     setSidebarOpen(false);
+  });
+
+  // Dashboard quick actions: ir directo a registrar un ingreso o egreso
+  document.getElementById('quick-add-income')?.addEventListener('click', async () => {
+    navigateTo('transactions');
+    const { activateTxTab } = await import('./transactions.js');
+    activateTxTab('income');
+    document.getElementById('income-amount')?.focus();
+  });
+
+  document.getElementById('quick-add-expense')?.addEventListener('click', async () => {
+    navigateTo('transactions');
+    const { activateTxTab } = await import('./transactions.js');
+    activateTxTab('expense');
+    document.getElementById('expense-amount')?.focus();
   });
 });

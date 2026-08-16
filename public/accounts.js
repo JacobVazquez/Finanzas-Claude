@@ -1,5 +1,5 @@
 import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, showToast, validateAmount } from './utils.js';
+import { formatMXN, toCents, fromCents, showToast, validateAmount, notifyDataChanged } from './utils.js';
 
 export const ACCOUNT_TYPES = [
   { value: 'efectivo', label: 'Efectivo' },
@@ -16,11 +16,13 @@ export async function createAccount(uid, { name, type, initialBalance }) {
   if (!name || !name.trim()) throw new Error('El nombre de la cuenta es requerido.');
   if (!ACCOUNT_TYPES.find(t => t.value === type)) throw new Error('Tipo de cuenta invalido.');
   const balanceCents = toCents(initialBalance || 0);
-  return await createDoc(uid, 'accounts', {
+  const id = await createDoc(uid, 'accounts', {
     name: name.trim(),
     type,
     initialBalance: balanceCents
   });
+  notifyDataChanged();
+  return id;
 }
 
 /**
@@ -39,6 +41,7 @@ export async function updateAccount(uid, id, data) {
     update.initialBalance = toCents(update.initialBalance);
   }
   await updateDocById(uid, 'accounts', id, update);
+  notifyDataChanged();
 }
 
 /**
@@ -51,6 +54,7 @@ export async function deleteAccount(uid, id) {
     throw new Error('No puedes eliminar una cuenta que tiene movimientos registrados.');
   }
   await deleteDocById(uid, 'accounts', id);
+  notifyDataChanged();
 }
 
 /**

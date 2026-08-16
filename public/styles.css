@@ -877,6 +877,25 @@ textarea { resize: vertical; min-height: 60px; }
 .export-card p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.5; }
 
 /* ============================================================
+   Dashboard Quick Actions
+   ============================================================ */
+.dashboard-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-title-row h2 { margin-bottom: 0; }
+
+.dashboard-quick-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ============================================================
    Dashboard Filters
    ============================================================ */
 .dashboard-filters {
