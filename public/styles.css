@@ -357,7 +357,7 @@ input, select, textarea, button { font-family: inherit; font-size: inherit; }
    ============================================================ */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 1rem;
   margin-bottom: 1.25rem;
 }
@@ -402,9 +402,8 @@ input, select, textarea, button { font-family: inherit; font-size: inherit; }
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 .kpi-card.kpi-positive { border-left: 4px solid var(--success); }
