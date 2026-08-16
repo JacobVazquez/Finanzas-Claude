@@ -1,5 +1,5 @@
 import { createDoc, readDocs, updateDocById, deleteDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate } from './utils.js';
+import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, notifyDataChanged } from './utils.js';
 
 /**
  * Crea una nueva deuda
@@ -9,7 +9,7 @@ export async function createDebt(uid, { name, initialAmount, creditor, dueDate, 
   if (!validateAmount(initialAmount)) throw new Error('El monto inicial debe ser mayor a 0.');
 
   const cents = toCents(initialAmount);
-  return await createDoc(uid, 'debts', {
+  const id = await createDoc(uid, 'debts', {
     name: name.trim(),
     initialAmount: cents,
     pendingAmount: cents,
@@ -18,6 +18,8 @@ export async function createDebt(uid, { name, initialAmount, creditor, dueDate, 
     description: description || '',
     status: 'active'
   });
+  notifyDataChanged();
+  return id;
 }
 
 /**
@@ -45,6 +47,7 @@ export async function updateDebt(uid, id, data) {
     update.initialAmount = toCents(update.initialAmount);
   }
   await updateDocById(uid, 'debts', id, update);
+  notifyDataChanged();
 }
 
 /**
@@ -52,6 +55,7 @@ export async function updateDebt(uid, id, data) {
  */
 export async function deleteDebt(uid, id) {
   await deleteDocById(uid, 'debts', id);
+  notifyDataChanged();
 }
 
 /**

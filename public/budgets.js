@@ -172,7 +172,7 @@ export async function renderBudgetsList(uid) {
 /**
  * Refresca la lista, el resumen KPI y la grafica de presupuestos
  */
-async function refreshBudgetsView(uid) {
+export async function refreshBudgetsView(uid) {
   const { renderBudgetVsSpentChart } = await import('./charts.js');
   await Promise.all([
     renderBudgetsList(uid),

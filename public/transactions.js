@@ -1,5 +1,5 @@
 import { createDoc, readDocs, deleteDocById, updateDocById } from './firestore.js';
-import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO } from './utils.js';
+import { formatMXN, toCents, fromCents, formatDate, showToast, validateAmount, validateDate, todayISO, notifyDataChanged } from './utils.js';
 import { getAccounts } from './accounts.js';
 import { getExpenseCategories, getIncomeTypes, populateCategorySelects } from './categories.js';
 import { getDebts } from './debts.js';
@@ -31,6 +31,7 @@ export async function addIncome(uid, { accountId, incomeTypeId, amount, date, de
     date,
     description: description || ''
   });
+  notifyDataChanged();
 }
 
 /**
@@ -50,6 +51,7 @@ export async function addExpense(uid, { accountId, categoryId, amount, date, des
     date,
     description: description || ''
   });
+  notifyDataChanged();
 }
 
 /**
@@ -86,6 +88,7 @@ export async function addTransfer(uid, { fromAccountId, toAccountId, amount, dat
       transferGroupId
     })
   ]);
+  notifyDataChanged();
 }
 
 /**
@@ -114,6 +117,7 @@ export async function addDebtPayment(uid, { accountId, debtId, amount, date, des
       await registerDebtPayment(uid, debtId, cents);
     })()
   ]);
+  notifyDataChanged();
 }
 
 /**
@@ -141,6 +145,7 @@ export async function addGoalContribution(uid, { accountId, goalId, amount, date
       await updateGoal(uid, goalId, cents);
     })()
   ]);
+  notifyDataChanged();
 }
 
 /**
@@ -180,6 +185,7 @@ export async function deleteTransaction(uid, id) {
   if (t.transferGroupId) {
     const paired = transactions.filter(tx => tx.transferGroupId === t.transferGroupId);
     await Promise.all(paired.map(tx => deleteDocById(uid, 'transactions', tx.id)));
+    notifyDataChanged();
     return;
   }
 
@@ -208,6 +214,7 @@ export async function deleteTransaction(uid, id) {
   }
 
   await deleteDocById(uid, 'transactions', id);
+  notifyDataChanged();
 }
 
 /**
@@ -280,6 +287,14 @@ export async function renderTransactionsList(uid, filters = {}) {
 }
 
 /**
+ * Activa una pestana de movimientos (income, expense, transfer, debt-payment, goal-contribution)
+ */
+export function activateTxTab(tab) {
+  document.querySelectorAll('.tx-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tx-tab-panel').forEach(p => p.classList.toggle('active', p.id === `tx-panel-${tab}`));
+}
+
+/**
  * Inicializa la seccion de movimientos
  */
 export async function setupTransactionsSection(uid) {
@@ -293,14 +308,7 @@ export async function setupTransactionsSection(uid) {
 
   // Tab switching
   document.querySelectorAll('.tx-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      document.querySelectorAll('.tx-tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tx-tab-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      const panel = document.getElementById(`tx-panel-${tab}`);
-      if (panel) panel.classList.add('active');
-    });
+    btn.addEventListener('click', () => activateTxTab(btn.dataset.tab));
   });
 
   // Populate account selects

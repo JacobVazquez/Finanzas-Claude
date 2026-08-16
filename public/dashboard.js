@@ -159,10 +159,19 @@ function getDateRange(filter, customStart, customEnd) {
   return { startDate, endDate };
 }
 
+// Recuerda el ultimo filtro usado para poder refrescar el dashboard sin perderlo
+let lastFilter = 'month';
+let lastCustomStart;
+let lastCustomEnd;
+
 /**
  * Carga el dashboard completo
  */
 export async function loadDashboard(uid, filter = 'month', customStart, customEnd) {
+  lastFilter = filter;
+  lastCustomStart = customStart;
+  lastCustomEnd = customEnd;
+
   const { startDate, endDate } = getDateRange(filter, customStart, customEnd);
 
   try {
@@ -181,6 +190,13 @@ export async function loadDashboard(uid, filter = 'month', customStart, customEn
     console.error('Error cargando dashboard:', err);
     showToast('Error cargando el dashboard', 'error');
   }
+}
+
+/**
+ * Vuelve a cargar el dashboard usando el ultimo filtro seleccionado
+ */
+export async function refreshDashboard(uid) {
+  await loadDashboard(uid, lastFilter, lastCustomStart, lastCustomEnd);
 }
 
 /**

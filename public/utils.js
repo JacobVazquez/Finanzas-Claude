@@ -168,6 +168,14 @@ export function lastDayOfMonth() {
 }
 
 /**
+ * Avisa a la app que los datos (movimientos, cuentas, metas, deudas)
+ * cambiaron, para que las vistas que muestran montos se actualicen solas.
+ */
+export function notifyDataChanged() {
+  document.dispatchEvent(new CustomEvent('finanzas:data-changed'));
+}
+
+/**
  * Trunca texto largo
  * @param {string} text
  * @param {number} maxLen
