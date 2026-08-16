@@ -190,12 +190,16 @@ async function renderCategoriesLists(uid) {
             const children = childrenByParent[c.id] || [];
             return `
               <div class="category-node">
-                <div class="category-node-header">
+                <div class="category-node-title-row">
                   <span class="category-name">${c.name}</span>
-                  <div class="category-node-actions">
-                    <button class="btn btn-sm btn-outline" onclick="window._addSubcategory('${c.id}', '${uid}')">+ Subcategoria</button>
-                    ${!c.isDefault ? `<button class="btn btn-sm btn-danger" onclick="window._deleteCat('${c.id}', '${uid}')">Eliminar</button>` : '<span class="badge-default">Predefinida</span>'}
-                  </div>
+                  ${children.length > 0 ? `<span class="category-count">${children.length}</span>` : ''}
+                </div>
+                <div class="category-node-actions">
+                  <button class="btn-add-sub" onclick="window._addSubcategory('${c.id}', '${uid}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Subcategoria
+                  </button>
+                  ${!c.isDefault ? `<button class="btn btn-sm btn-danger" onclick="window._deleteCat('${c.id}', '${uid}')">Eliminar</button>` : '<span class="badge-default">Predefinida</span>'}
                 </div>
                 ${children.length > 0 ? `
                   <ul class="subcategory-list">
